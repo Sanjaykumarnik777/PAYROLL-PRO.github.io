@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Employees{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Employees</h1>
+    <table>
+        <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Department</th>
+            <th>Gender</th>
+            <th>Salary</th>
+            <th>Tax Regime</th>
+        </tr>
+        {% for row in employees %}
+        <tr>
+            <td>{{ row.emp_code }}</td>
+            <td>{{ row.employee_name }}</td>
+            <td>{{ row.role }}</td>
+            <td>{{ row.department }}</td>
+            <td>{{ row.gender }}</td>
+            <td>₹{{ row.monthly_salary }}</td>
+            <td>{{ row.tax_regime }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}

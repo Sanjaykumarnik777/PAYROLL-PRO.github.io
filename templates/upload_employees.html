@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Upload Employees{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Upload Employee Master</h1>
+    <p>Required columns:</p>
+    <p>emp_code, employee_name, role, department, gender, monthly_salary, tax_regime, other_annual_deductions, special_allowance</p>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="file" required>
+        <button type="submit">Upload Employees</button>
+    </form>
+</div>
+{% endblock %}

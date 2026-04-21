@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Attendance{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Attendance Data</h1>
+    <table>
+        <tr>
+            <th>Employee Code</th>
+            <th>Month</th>
+            <th>Working Days</th>
+            <th>Present Days</th>
+            <th>Overtime Hours</th>
+            <th>Bonus</th>
+            <th>Manual Deduction</th>
+        </tr>
+        {% for row in rows %}
+        <tr>
+            <td>{{ row.emp_code }}</td>
+            <td>{{ row.month }}</td>
+            <td>{{ row.working_days }}</td>
+            <td>{{ row.present_days }}</td>
+            <td>{{ row.overtime_hours }}</td>
+            <td>₹{{ row.bonus }}</td>
+            <td>₹{{ row.manual_deduction }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}

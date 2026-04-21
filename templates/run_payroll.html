@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Run Payroll{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Run Payroll</h1>
+    <form method="POST">
+        <input type="text" name="month" placeholder="Enter month (e.g. 2026-04)" required>
+        <button type="submit">Run Payroll</button>
+    </form>
+</div>
+{% endblock %}

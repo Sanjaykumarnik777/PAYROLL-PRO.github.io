@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Payments{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>Payment History</h1>
+
+    <table>
+        <tr>
+            <th>Amount</th>
+            <th>Payment ID</th>
+            <th>Order ID</th>
+            <th>Status</th>
+            <th>Date</th>
+        </tr>
+
+        {% for row in rows %}
+        <tr>
+            <td>₹{{ row.amount|round|int }}</td>
+            <td>{{ row.payment_id }}</td>
+            <td>{{ row.order_id }}</td>
+            <td>{{ row.status }}</td>
+            <td>{{ row.created_at }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}

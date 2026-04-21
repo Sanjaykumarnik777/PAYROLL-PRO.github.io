@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Payroll Pro{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    {% if session.get('user_id') %}
+    <div class="sidebar">
+        <h2>SmartHire</h2>
+        <a href="{{ url_for('dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('upload_employees') }}">Upload Employees</a>
+        <a href="{{ url_for('employees_list') }}">Employees</a>
+        <a href="{{ url_for('upload_attendance') }}">Upload Attendance</a>
+        <a href="{{ url_for('attendance_list') }}">Attendance</a>
+        <a href="{{ url_for('run_payroll') }}">Run Payroll</a>
+        <a href="{{ url_for('payroll_history') }}">Payroll History</a>
+        <a href="{{ url_for('pricing') }}">Pricing</a>
+        <a href="{{ url_for('payments') }}">Payments</a>
+        <a href="{{ url_for('logout') }}">Logout</a>
+    </div>
+    {% endif %}
+
+    <div class="main {% if not session.get('user_id') %}full{% endif %}">
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for message in messages %}
+            <div class="flash">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

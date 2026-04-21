@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+        <h1 style="margin:0;">{{ company_name }} Payroll Dashboard</h1>
+
+        {% if active_plan %}
+            <span class="pro-badge">
+                {{ active_plan.plan_name|upper }} ACTIVE
+            </span>
+        {% else %}
+            <span class="free-badge">FREE PLAN</span>
+        {% endif %}
+    </div>
+
+    <p style="margin-top:14px; color:#64748b;">
+        {% if active_plan %}
+            Current Plan: <strong>{{ active_plan.plan_name|upper }}</strong>
+            {% if active_plan.start_date %}
+                | Activated: {{ active_plan.start_date }}
+            {% endif %}
+        {% else %}
+            You are currently on the free plan.
+        {% endif %}
+    </p>
+</div>
+
+<div class="stats">
+    <div class="card stat-card">
+        <h3>Employees</h3>
+        <p>{{ employee_count }}</p>
+    </div>
+    <div class="card stat-card">
+        <h3>Attendance Rows</h3>
+        <p>{{ attendance_count }}</p>
+    </div>
+    <div class="card stat-card">
+        <h3>Payroll Runs</h3>
+        <p>{{ payroll_count }}</p>
+    </div>
+</div>
+{% endblock %}

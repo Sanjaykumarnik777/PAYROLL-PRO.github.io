@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Upload Attendance{% endblock %}
+{% block content %}
+<div class="card">
+    <h1>Upload Biometric Attendance</h1>
+    <p>Required columns: emp_code, month, working_days, present_days, overtime_hours, bonus, manual_deduction</p>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="file" required>
+        <button type="submit">Upload Attendance</button>
+    </form>
+</div>
+{% endblock %}

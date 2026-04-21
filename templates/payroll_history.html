@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Payroll History{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>Payroll History</h1>
+
+    <form method="GET" class="filter-form">
+        <input
+            type="text"
+            name="month"
+            placeholder="Filter by month (e.g. 2026-04)"
+            value="{{ selected_month }}"
+        >
+
+        <select name="department">
+            <option value="">All Departments</option>
+            {% for dept in departments %}
+            <option value="{{ dept.department }}" {% if selected_department == dept.department %}selected{% endif %}>
+                {{ dept.department }}
+            </option>
+            {% endfor %}
+        </select>
+
+        <button type="submit">Apply Filter</button>
+
+        <a href="{{ url_for('export_excel', month=selected_month, department=selected_department) }}" class="export-btn">
+            Export Excel
+        </a>
+    </form>
+
+    <table>
+        <tr>
+            <th>Name</th>
+            <th>Code</th>
+            <th>Role</th>
+            <th>Department</th>
+            <th>Gender</th>
+            <th>Month</th>
+            <th>Gross</th>
+            <th>Total Deductions</th>
+            <th>Festival Bonus</th>
+            <th>Net Pay</th>
+            <th>Monthly CTC</th>
+            <th>Payslip</th>
+        </tr>
+
+        {% for row in rows %}
+        <tr>
+            <td>{{ row.employee_name }}</td>
+            <td>{{ row.emp_code }}</td>
+            <td>{{ row.role }}</td>
+            <td>{{ row.department }}</td>
+            <td>{{ row.gender }}</td>
+            <td>{{ row.month }}</td>
+            <td>₹{{ row.gross|round|int }}</td>
+            <td>₹{{ row.total_deductions|round|int }}</td>
+            <td>₹{{ row.festival_bonus|round|int }}</td>
+            <td><span class="badge">₹{{ row.net_pay|round|int }}</span></td>
+            <td>₹{{ row.monthly_ctc|round|int }}</td>
+            <td>
+                <a href="{{ url_for('download_payslip', payroll_id=row.id) }}">
+                    Download PDF
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+{% endblock %}
