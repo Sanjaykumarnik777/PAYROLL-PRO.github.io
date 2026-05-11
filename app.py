@@ -5064,9 +5064,16 @@ def faq():
 # ---------------------------
 # START APP
 # ---------------------------
-if __name__ == "__main__":
+def setup_database():
     init_db()
     ensure_leave_tables()
     add_leave_payroll_columns()
     add_payment_order_id_column()
+
+
+# Render / Gunicorn ke liye database setup
+setup_database()
+
+
+if __name__ == "__main__":
     app.run(debug=True)
