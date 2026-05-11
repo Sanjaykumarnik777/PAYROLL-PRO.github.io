@@ -3,36 +3,202 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Payroll Pro{% endblock %}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    {% if session.get('user_id') %}
-    <div class="sidebar">
-        <h2>SmartHire</h2>
-        <a href="{{ url_for('dashboard') }}">Dashboard</a>
-        <a href="{{ url_for('upload_employees') }}">Upload Employees</a>
-        <a href="{{ url_for('employees_list') }}">Employees</a>
-        <a href="{{ url_for('upload_attendance') }}">Upload Attendance</a>
-        <a href="{{ url_for('attendance_list') }}">Attendance</a>
-        <a href="{{ url_for('run_payroll') }}">Run Payroll</a>
-        <a href="{{ url_for('payroll_history') }}">Payroll History</a>
-        <a href="{{ url_for('pricing') }}">Pricing</a>
-        <a href="{{ url_for('payments') }}">Payments</a>
-        <a href="{{ url_for('logout') }}">Logout</a>
-    </div>
-    {% endif %}
+    <title>{% block title %}SmartHire Payroll{% endblock %}</title>
 
-    <div class="main {% if not session.get('user_id') %}full{% endif %}">
-        {% with messages = get_flashed_messages() %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+{% if session.get('user_id') %}
+
+<button class="mobile-menu-btn" onclick="toggleSidebar()">
+    ☰
+</button>
+
+<div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<div class="app-shell">
+
+    <aside class="sidebar" id="sidebar">
+        <div class="brand-box">
+            <div class="brand-logo">SH</div>
+            <div>
+                <h2>SmartHire</h2>
+                <p>Payroll SaaS</p>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+
+            <div class="nav-section">Overview</div>
+
+            <a href="{{ url_for('dashboard') }}"
+               class="{% if request.endpoint == 'dashboard' %}active{% endif %}">
+                📊 Dashboard
+            </a>
+
+            <a href="{{ url_for('company_profile') }}"
+               class="{% if request.endpoint == 'company_profile' %}active{% endif %}">
+                🏢 Company Profile
+            </a>
+
+            <a href="{{ url_for('compliance_settings') }}"
+               class="{% if request.endpoint == 'compliance_settings' %}active{% endif %}">
+                ⚙️ Compliance Settings
+            </a>
+
+            <div class="nav-section">Employees</div>
+
+            <a href="{{ url_for('upload_employees') }}"
+               class="{% if request.endpoint == 'upload_employees' %}active{% endif %}">
+                ⬆️ Upload Employees
+            </a>
+
+            <a href="{{ url_for('employees_list') }}"
+               class="{% if request.endpoint == 'employees_list' %}active{% endif %}">
+                👥 Employees
+            </a>
+
+            <div class="nav-section">Attendance</div>
+
+            <a href="{{ url_for('upload_attendance') }}"
+               class="{% if request.endpoint == 'upload_attendance' %}active{% endif %}">
+                🕒 Upload Attendance
+            </a>
+
+            <a href="{{ url_for('attendance_list') }}"
+               class="{% if request.endpoint == 'attendance_list' %}active{% endif %}">
+                📅 Attendance
+            </a>
+
+            <div class="nav-section">Leave</div>
+
+            <a href="{{ url_for('leave_management') }}"
+               class="{% if request.endpoint == 'leave_management' %}active{% endif %}">
+                🌿 Leave Management
+            </a>
+
+            <div class="nav-section">Payroll</div>
+
+            <a href="{{ url_for('run_payroll') }}"
+               class="{% if request.endpoint == 'run_payroll' %}active{% endif %}">
+                💰 Run Payroll
+            </a>
+
+            <a href="{{ url_for('payroll_history') }}"
+               class="{% if request.endpoint == 'payroll_history' %}active{% endif %}">
+                📄 Payroll History
+            </a>
+
+            <a href="{{ url_for('full_and_final') }}"
+               class="{% if request.endpoint == 'full_and_final' %}active{% endif %}">
+                ✅ Full & Final
+            </a>
+
+            <div class="nav-section">Reports</div>
+
+            <a href="{{ url_for('payroll_history') }}"
+               class="{% if request.endpoint in ['hr_audit_report', 'export_excel', 'download_all_payslips'] %}active{% endif %}">
+                🛡️ Reports & Audit
+            </a>
+
+            <div class="nav-section">Billing</div>
+
+            <a href="{{ url_for('pricing') }}"
+               class="{% if request.endpoint == 'pricing' %}active{% endif %}">
+                💎 Pricing
+            </a>
+
+            <a href="{{ url_for('payments') }}"
+               class="{% if request.endpoint == 'payments' %}active{% endif %}">
+                💳 Payments
+            </a>
+
+            <a href="{{ url_for('faq') }}"
+               class="{% if request.endpoint == 'faq' %}active{% endif %}">
+                ❓ FAQ
+            </a>
+
+            <div class="nav-section">Support</div>
+
+            <a href="https://wa.me/918208955201" target="_blank">
+                💬 WhatsApp Help
+            </a>
+
+            <a href="https://mail.google.com/mail/?view=cm&fs=1&to=support@smarthireai.in&su=Payroll%20Support%20Request"
+               target="_blank">
+                📧 Email Support
+            </a>
+
+        </nav>
+
+        <div class="sidebar-footer">
+            <a href="{{ url_for('logout') }}" class="logout-btn">
+                🚪 Logout
+            </a>
+        </div>
+    </aside>
+
+    <main class="main">
+        <header class="topbar">
+            <div>
+                <h1>{% block page_heading %}Payroll Dashboard{% endblock %}</h1>
+                <p>{% block page_subheading %}Manage employees, attendance, payroll and compliance in one place.{% endblock %}</p>
+            </div>
+
+            <div class="topbar-actions">
+                <span class="status-pill">Active SaaS</span>
+            </div>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
-            {% for message in messages %}
-            <div class="flash">{{ message }}</div>
-            {% endfor %}
+            <div class="flash-wrapper">
+                {% for category, message in messages %}
+                <div class="flash {{ category }}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
           {% endif %}
         {% endwith %}
 
-        {% block content %}{% endblock %}
-    </div>
+        <section class="content-area">
+            {% block content %}{% endblock %}
+        </section>
+    </main>
+
+</div>
+
+<script>
+function toggleSidebar() {
+    document.body.classList.toggle("sidebar-open");
+}
+</script>
+
+{% else %}
+
+<main class="auth-main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-wrapper">
+            {% for category, message in messages %}
+            <div class="flash {{ category }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <section class="auth-content">
+        {{ self.content() }}
+    </section>
+</main>
+
+{% endif %}
+
 </body>
 </html>

@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartHire Payroll SaaS</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body class="landing-body">
+
+<section class="landing-hero">
+    <nav class="landing-nav">
+        <div class="landing-brand">
+            <div class="landing-logo">SH</div>
+            <div>
+                <h2>SmartHire</h2>
+                <p>Payroll SaaS</p>
+            </div>
+        </div>
+
+        <div class="landing-nav-actions">
+            <a href="{{ url_for('login') }}" class="nav-login-btn">Login</a>
+            <a href="{{ url_for('register') }}" class="nav-register-btn">Start Free</a>
+        </div>
+    </nav>
+
+    <div class="landing-hero-grid">
+        <div class="hero-content">
+            <span class="hero-badge">Smart Payroll Management</span>
+
+            <h1>Run Payroll, Attendance & Compliance From One Dashboard</h1>
+
+            <p>
+                SmartHire helps small and growing companies manage employees,
+                payroll, attendance, payslips, compliance and HR reports in minutes.
+            </p>
+
+            <div class="hero-buttons">
+                <a href="{{ url_for('register') }}" class="hero-primary-btn">Start Free Trial</a>
+
+                <a href="https://wa.me/918208955201" target="_blank" class="hero-secondary-btn">
+                    WhatsApp Demo
+                </a>
+            </div>
+        </div>
+
+        <div class="hero-preview-card">
+            <div class="preview-topbar">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+
+            <h3>Payroll Overview</h3>
+
+            <div class="preview-stats">
+                <div>
+                    <span>Employees</span>
+                    <b>128</b>
+                </div>
+
+                <div>
+                    <span>Net Pay</span>
+                    <b>₹8.4L</b>
+                </div>
+            </div>
+
+            <div class="preview-chart">
+                <div style="height: 55%;"></div>
+                <div style="height: 75%;"></div>
+                <div style="height: 45%;"></div>
+                <div style="height: 85%;"></div>
+                <div style="height: 65%;"></div>
+            </div>
+
+            <div class="preview-row">
+                <span>PF / ESIC / PT</span>
+                <b>Auto Calculated</b>
+            </div>
+
+            <div class="preview-row">
+                <span>Payslips</span>
+                <b>PDF Ready</b>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="feature-section">
+    <div class="feature-card">
+        <div class="feature-icon">👥</div>
+        <h3>Employee Management</h3>
+        <p>Upload and manage employee master records easily.</p>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-icon">🕒</div>
+        <h3>Attendance Upload</h3>
+        <p>Import biometric attendance directly from Excel files.</p>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-icon">💰</div>
+        <h3>Payroll Processing</h3>
+        <p>Run payroll with PF, ESIC, PT and TDS calculations.</p>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-icon">📄</div>
+        <h3>Professional Payslips</h3>
+        <p>Generate branded PDF payslips instantly.</p>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-icon">🛡️</div>
+        <h3>HR Compliance</h3>
+        <p>Track compliance settings and HR audit reports.</p>
+    </div>
+
+    <div class="feature-card">
+        <div class="feature-icon">☁️</div>
+        <h3>Cloud SaaS</h3>
+        <p>Access your payroll dashboard securely from anywhere.</p>
+    </div>
+</section>
+
+<section class="lp-faq-section">
+    <div class="lp-faq-header">
+        <span class="hero-badge">FAQ</span>
+        <h2>Frequently Asked Questions</h2>
+        <p>Common questions clients may ask before using SmartHire Payroll.</p>
+    </div>
+
+    <div class="lp-faq-list">
+        <div class="lp-faq-item">
+            <button type="button" class="lp-faq-question">
+                How does payroll processing work?
+                <span>+</span>
+            </button>
+            <div class="lp-faq-answer">
+                Upload employees, upload monthly attendance, then run payroll. The system calculates salary, deductions, net pay and generates reports.
+            </div>
+        </div>
+
+        <div class="lp-faq-item">
+            <button type="button" class="lp-faq-question">
+                Can I upload biometric attendance?
+                <span>+</span>
+            </button>
+            <div class="lp-faq-answer">
+                Yes. You can upload attendance data using Excel or CSV format with working days, present days, overtime, bonus and manual deductions.
+            </div>
+        </div>
+
+        <div class="lp-faq-item">
+            <button type="button" class="lp-faq-question">
+                Does SmartHire Payroll support PF, ESIC and PT?
+                <span>+</span>
+            </button>
+            <div class="lp-faq-answer">
+                Yes. The system supports PF, ESIC, professional tax, bonus, gratuity, TDS settings and company-wise compliance rules.
+            </div>
+        </div>
+
+        <div class="lp-faq-item">
+            <button type="button" class="lp-faq-question">
+                Can I download payslips?
+                <span>+</span>
+            </button>
+            <div class="lp-faq-answer">
+                Yes. You can generate professional PDF payslips and download payroll reports in Excel.
+            </div>
+        </div>
+
+        <div class="lp-faq-item">
+            <button type="button" class="lp-faq-question">
+                Is this suitable for small companies?
+                <span>+</span>
+            </button>
+            <div class="lp-faq-answer">
+                Yes. SmartHire Payroll is designed for small and growing companies that want a simple SaaS payroll system without complex setup.
+            </div>
+        </div>
+
+        <div class="lp-faq-item">
+            <button type="button" class="lp-faq-question">
+                How can I get support?
+                <span>+</span>
+            </button>
+            <div class="lp-faq-answer">
+                You can contact support through WhatsApp or email from inside the dashboard.
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="landing-cta">
+    <h2>Ready to Simplify Payroll?</h2>
+    <p>Start managing payroll professionally with SmartHire Payroll SaaS.</p>
+
+    <a href="{{ url_for('register') }}">Create Company Account</a>
+</section>
+
+<script>
+document.querySelectorAll(".lp-faq-question").forEach(function(button) {
+    button.addEventListener("click", function() {
+        const item = button.parentElement;
+        item.classList.toggle("active");
+
+        const icon = button.querySelector("span");
+        icon.textContent = item.classList.contains("active") ? "-" : "+";
+    });
+});
+</script>
+
+</body>
+</html>

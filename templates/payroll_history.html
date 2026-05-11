@@ -1,70 +1,236 @@
 {% extends "base.html" %}
-{% block title %}Payroll History{% endblock %}
+
+{% block title %}Payroll History | SmartHire Payroll{% endblock %}
+
+{% block page_heading %}Payroll History{% endblock %}
+{% block page_subheading %}View monthly payroll register, salary payouts, deductions, leave impact and payslip downloads.{% endblock %}
 
 {% block content %}
-<div class="card">
-    <h1>Payroll History</h1>
 
-    <form method="GET" class="filter-form">
-        <input
-            type="text"
-            name="month"
-            placeholder="Filter by month (e.g. 2026-04)"
-            value="{{ selected_month }}"
-        >
+<div class="card">
+    <div class="table-header">
+        <div>
+            <span class="section-tag">PAYROLL REGISTER</span>
+            <h2>Payroll History</h2>
+            <p>Filter payroll by month, department or employee details.</p>
+        </div>
+
+        {% if selected_month %}
+        <span class="table-count">{{ selected_month }}</span>
+        {% endif %}
+    </div>
+
+    <form method="GET" class="filter-form payroll-filter-form">
+        <input type="month" name="month" value="{{ selected_month }}">
 
         <select name="department">
             <option value="">All Departments</option>
             {% for dept in departments %}
-            <option value="{{ dept.department }}" {% if selected_department == dept.department %}selected{% endif %}>
-                {{ dept.department }}
+            <option value="{{ dept['department'] }}" {% if selected_department == dept['department'] %}selected{% endif %}>
+                {{ dept['department'] }}
             </option>
             {% endfor %}
         </select>
 
+        <input
+            type="text"
+            name="search"
+            placeholder="Search employee / code / role"
+            value="{{ search }}"
+        >
+
         <button type="submit">Apply Filter</button>
 
-        <a href="{{ url_for('export_excel', month=selected_month, department=selected_department) }}" class="export-btn">
-            Export Excel
+        <a href="{{ url_for('payroll_history') }}" class="secondary-btn">
+            Reset
         </a>
     </form>
 
-    <table>
-        <tr>
-            <th>Name</th>
-            <th>Code</th>
-            <th>Role</th>
-            <th>Department</th>
-            <th>Gender</th>
-            <th>Month</th>
-            <th>Gross</th>
-            <th>Total Deductions</th>
-            <th>Festival Bonus</th>
-            <th>Net Pay</th>
-            <th>Monthly CTC</th>
-            <th>Payslip</th>
-        </tr>
+    {% if selected_month %}
+    <div class="action-row">
+        <a href="{{ url_for('export_excel', month=selected_month, department=selected_department) }}" class="export-btn">
+            Export Excel
+        </a>
 
-        {% for row in rows %}
-        <tr>
-            <td>{{ row.employee_name }}</td>
-            <td>{{ row.emp_code }}</td>
-            <td>{{ row.role }}</td>
-            <td>{{ row.department }}</td>
-            <td>{{ row.gender }}</td>
-            <td>{{ row.month }}</td>
-            <td>₹{{ row.gross|round|int }}</td>
-            <td>₹{{ row.total_deductions|round|int }}</td>
-            <td>₹{{ row.festival_bonus|round|int }}</td>
-            <td><span class="badge">₹{{ row.net_pay|round|int }}</span></td>
-            <td>₹{{ row.monthly_ctc|round|int }}</td>
-            <td>
-                <a href="{{ url_for('download_payslip', payroll_id=row.id) }}">
-                    Download PDF
-                </a>
-            </td>
-        </tr>
-        {% endfor %}
-    </table>
+        <a href="{{ url_for('hr_audit_report', month=selected_month) }}" class="export-btn">
+            HR Audit Report
+        </a>
+
+        <a href="{{ url_for('download_all_payslips', month=selected_month) }}" class="export-btn">
+            Download All Payslips
+        </a>
+
+        <form method="POST"
+              action="{{ url_for('delete_payroll', month=selected_month) }}"
+              style="display:inline;">
+            <button type="submit"
+                    class="danger-btn"
+                    onclick="return confirm('Are you sure you want to delete payroll for {{ selected_month }}? Leave records and leave balances will not be changed.');">
+                Delete Payroll
+            </button>
+        </form>
+    </div>
+    {% endif %}
 </div>
+
+{% if records %}
+
+<div class="stats">
+    <div class="card stat-card">
+        <div class="stat-icon">👥</div>
+        <h3>Total Employees</h3>
+        <h2>{{ total_employees|default(0) }}</h2>
+        <p>Employees in this payroll</p>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon">💰</div>
+        <h3>Total Gross</h3>
+        <h2>₹{{ total_gross|default(0) }}</h2>
+        <p>Before deductions</p>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon">📉</div>
+        <h3>Total Deductions</h3>
+        <h2>₹{{ total_deductions|default(0) }}</h2>
+        <p>PF, ESIC, PT and other deductions</p>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon">✅</div>
+        <h3>Total Net Pay</h3>
+        <h2>₹{{ total_net_pay|default(0) }}</h2>
+        <p>Final payable amount</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-header">
+        <div>
+            <h2>Payroll Register</h2>
+            <p>Complete monthly salary processing summary with attendance and leave impact.</p>
+        </div>
+
+        <span class="table-count">{{ records|length }} Records</span>
+    </div>
+
+    <p class="table-scroll-hint">Swipe left to view full payroll details →</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Month</th>
+                    <th>Payable Days</th>
+                    <th>Paid Leave</th>
+                    <th>LWP Days</th>
+                    <th>LWP Deduction</th>
+                    <th>Gross</th>
+                    <th>Deductions</th>
+                    <th>Festival Bonus</th>
+                    <th>Net Pay</th>
+                    <th>Monthly CTC</th>
+                    <th>Payslip</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for row in records %}
+                <tr>
+                    <td>
+    <div class="employee-cell payroll-employee-cell">
+        <div class="avatar-circle">
+            {{ (row['employee_name'] or row['emp_code'])[0] }}
+        </div>
+
+        <div class="employee-meta">
+            <b>{{ row['employee_name'] }}</b>
+
+            <span class="employee-code">
+                {{ row['emp_code'] }}
+            </span>
+
+            <span class="employee-role">
+                {{ row['role'] }} • {{ row['gender']|title }}
+            </span>
+        </div>
+    </div>
+</td>
+
+                    <td>
+                        <span class="dept-badge">
+                            {{ row['department'] }}
+                        </span>
+                    </td>
+
+                    <td>{{ row['month'] }}</td>
+
+                    <td>
+                        <span class="badge free">
+                            {{ row['payable_days']|default(0)|round|int }}
+                        </span>
+                    </td>
+
+                    <td>
+                        {{ row['paid_leave_days']|default(0)|round|int }}
+                    </td>
+
+                    <td>
+                        {% if row['lwp_days']|default(0)|float > 0 %}
+                            <span class="badge free">
+                                {{ row['lwp_days']|round|int }}
+                            </span>
+                        {% else %}
+                            0
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        ₹{{ row['lwp_deduction']|default(0)|round|int }}
+                    </td>
+
+                    <td>
+                        <span class="salary-box">
+                            ₹{{ row['gross']|default(0)|round|int }}
+                        </span>
+                    </td>
+
+                    <td>₹{{ row['total_deductions']|default(0)|round|int }}</td>
+
+                    <td>₹{{ row['festival_bonus']|default(0)|round|int }}</td>
+
+                    <td>
+                        <span class="badge pro">
+                            ₹{{ row['net_pay']|default(0)|round|int }}
+                        </span>
+                    </td>
+
+                    <td>₹{{ row['monthly_ctc']|default(0)|round|int }}</td>
+
+                    <td>
+                        <a href="{{ url_for('download_payslip', payroll_id=row['id']) }}" class="small-btn">
+                            PDF
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% else %}
+
+<div class="card empty-state">
+    <div class="empty-icon">📄</div>
+    <h2>No payroll history found</h2>
+    <p>Select a month or run payroll to generate payroll records.</p>
+    <a href="{{ url_for('run_payroll') }}" class="primary-link">Run Payroll</a>
+</div>
+
+{% endif %}
+
 {% endblock %}

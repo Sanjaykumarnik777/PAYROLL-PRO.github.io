@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}FAQ{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>Payroll System FAQ</h1>
+    <p>This guide explains how to use the payroll system step by step.</p>
+</div>
+
+<div class="card">
+    <h2>1. Company Profile ka use kya hai?</h2>
+    <p>
+        Company Profile me company name, address, email, phone aur overtime policy save hoti hai.
+        Ye details payslip aur F&F PDF me automatically show hoti hain.
+    </p>
+</div>
+
+<div class="card">
+    <h2>2. Compliance Settings ka use kya hai?</h2>
+    <p>
+        Compliance Settings me PF, ESIC, gratuity, bonus aur TDS related rates save kar sakte ho.
+        Agar future me rate change hota hai, to code change kiye bina settings update ki ja sakti hain.
+    </p>
+</div>
+
+<div class="card">
+    <h2>3. Employee Master kaise upload karein?</h2>
+    <p>
+        Employees page par jaakar Download Sample button se sample Excel download karo.
+        Usme employee details fill karo aur Upload Employees page se upload karo.
+    </p>
+
+    <p><b>Required columns:</b></p>
+    <p>
+        emp_code, employee_name, role, department, gender, monthly_salary, tax_regime,
+        other_annual_deductions, special_allowance, uan_no, esic_no, bank_name,
+        account_no, ifsc_code
+    </p>
+</div>
+
+<div class="card">
+    <h2>4. Attendance kaise upload karein?</h2>
+    <p>
+        Attendance page par sample file download karo. Month, working days, present days,
+        overtime hours, bonus aur manual deduction fill karo. Phir Upload Attendance page se upload karo.
+    </p>
+
+    <p><b>Required columns:</b></p>
+    <p>
+        emp_code, month, working_days, present_days, overtime_hours, bonus, manual_deduction
+    </p>
+</div>
+
+<div class="card">
+    <h2>5. Payroll kaise run karein?</h2>
+    <p>
+        Pehle employee master upload karo. Uske baad attendance upload karo.
+        Phir Run Payroll page par month select karke payroll run karo.
+    </p>
+</div>
+
+<div class="card">
+    <h2>6. Payslip PDF kaise download karein?</h2>
+    <p>
+        Payroll History page me month select karo. Har employee ke row me PDF button dikhega.
+        Usse individual payslip download kar sakte ho.
+    </p>
+</div>
+
+<div class="card">
+    <h2>7. Bulk payslip kaise download karein?</h2>
+    <p>
+        Payroll History page me month select karne ke baad Download All Payslips button dikhega.
+        Usse selected month ki payslips ZIP file me download hoti hain.
+    </p>
+</div>
+
+<div class="card">
+    <h2>8. Excel payroll register kaise download karein?</h2>
+    <p>
+        Payroll History page me month select karo aur Export Excel button click karo.
+        Ye salary register Excel file generate karta hai.
+    </p>
+</div>
+
+<div class="card">
+    <h2>9. HR Audit Report kya hai?</h2>
+    <p>
+        HR Audit Report selected month ke employee master, attendance, payroll aur missing data ko check karta hai.
+        Isme Audit Summary, Employee Master Audit, Attendance Audit, Payroll Audit, Attendance Missing aur Payroll Missing sheets hoti hain.
+    </p>
+</div>
+
+<div class="card">
+    <h2>10. Full & Final kaise use karein?</h2>
+    <p>
+        Full & Final page me employee select karo, last working day, paid days, leave balance,
+        recoveries aur remarks fill karo. System final payable calculate karta hai.
+        F&F Excel aur PDF dono download kar sakte ho.
+    </p>
+</div>
+
+<div class="card">
+    <h2>11. Overtime single/double kaise set karein?</h2>
+    <p>
+        Company Profile page me Overtime Policy option diya gaya hai.
+        Single Rate - 1x ya Double Rate - 2x select karke save karo.
+        Payroll run karte time overtime amount us policy ke hisab se calculate hoga.
+    </p>
+</div>
+
+<div class="card">
+    <h2>12. Agar compliance rates change ho jayein to kya karein?</h2>
+    <p>
+        Compliance Settings page me updated rates fill karke save karo.
+        Future payroll runs me updated settings use hongi. Pehle ke payroll records automatically change nahi honge.
+    </p>
+</div>
+
+<div class="card">
+    <h2>13. Kya old payroll records change honge?</h2>
+    <p>
+        Nahi. Old payroll records historical data hain. Agar same month ka payroll dobara run karoge,
+        system old records ko inactive karke latest run ko current mark karega.
+    </p>
+</div>
+
+<div class="card">
+    <h2>14. Free aur Pro plan me kya difference hai?</h2>
+    <p>
+        Free plan limited use ke liye hai. Pro plan me PDF payslip, Excel export, HR Audit Report,
+        Full & Final Excel/PDF aur advanced features available hain.
+    </p>
+</div>
+{% endblock %}

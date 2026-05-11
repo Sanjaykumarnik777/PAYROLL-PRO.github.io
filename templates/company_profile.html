@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Company Profile | SmartHire Payroll{% endblock %}
+
+{% block page_heading %}Company Profile{% endblock %}
+{% block page_subheading %}Manage company details, overtime rules and working days policy.{% endblock %}
+
+{% block content %}
+
+<div class="profile-layout">
+
+    <div class="card profile-card">
+        <span class="section-tag">COMPANY SETTINGS</span>
+
+        <h1>Company Profile</h1>
+        <p class="profile-text">
+            These details will be used in payroll records, reports and payslips.
+        </p>
+
+        <form method="POST" class="profile-form">
+
+            <div class="form-group">
+                <label>Company Name</label>
+                <input 
+                    type="text" 
+                    name="company_name" 
+                    placeholder="Company Name"
+                    value="{{ company['company_name'] if company else '' }}"
+                    required
+                >
+            </div>
+
+            <div class="form-group full-row">
+                <label>Company Address</label>
+                <textarea 
+                    name="address" 
+                    placeholder="Company Address"
+                    rows="3"
+                >{{ company['address'] if company else '' }}</textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Company Email</label>
+                <input 
+                    type="email" 
+                    name="email" 
+                    placeholder="Company Email"
+                    value="{{ company['email'] if company else '' }}"
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Company Phone</label>
+                <input 
+                    type="text" 
+                    name="phone" 
+                    placeholder="Company Phone"
+                    value="{{ company['phone'] if company else '' }}"
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Overtime Policy</label>
+                <select name="overtime_multiplier">
+                    <option value="1"
+                        {% if company and company['overtime_multiplier']|float == 1 %}
+                            selected
+                        {% endif %}
+                    >
+                        Single Rate - 1x
+                    </option>
+
+                    <option value="2"
+                        {% if company and company['overtime_multiplier']|float == 2 %}
+                            selected
+                        {% endif %}
+                    >
+                        Double Rate - 2x
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Working Days Policy</label>
+                <select name="working_days_policy">
+                    <option value="attendance"
+                        {% if company and company['working_days_policy'] == "attendance" %}
+                            selected
+                        {% endif %}
+                    >
+                        Based on Attendance
+                    </option>
+
+                    <option value="fixed_26"
+                        {% if company and company['working_days_policy'] == "fixed_26" %}
+                            selected
+                        {% endif %}
+                    >
+                        Fixed 26 Days
+                    </option>
+
+                    <option value="fixed_30"
+                        {% if company and company['working_days_policy'] == "fixed_30" %}
+                            selected
+                        {% endif %}
+                    >
+                        Fixed 30 Days
+                    </option>
+                </select>
+            </div>
+
+            <div class="form-group full-row">
+                <button type="submit">
+                    Save Company Profile
+                </button>
+            </div>
+
+        </form>
+    </div>
+
+    <div class="card profile-info-card">
+        <h2>Payroll Policy Summary</h2>
+
+        <div class="feature-item">
+            <div class="feature-icon">🏢</div>
+            <div>
+                <b>Company Details</b>
+                <span>Used on reports, salary sheets and payslips.</span>
+            </div>
+        </div>
+
+        <div class="feature-item">
+            <div class="feature-icon">⏱️</div>
+            <div>
+                <b>Overtime Policy</b>
+                <span>Controls overtime calculation during payroll processing.</span>
+            </div>
+        </div>
+
+        <div class="feature-item">
+            <div class="feature-icon">📅</div>
+            <div>
+                <b>Working Days Policy</b>
+                <span>Choose attendance-based, fixed 26 days or fixed 30 days salary calculation.</span>
+            </div>
+        </div>
+
+        <div class="action-row">
+            <a href="{{ url_for('dashboard') }}" class="secondary-btn">
+                Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

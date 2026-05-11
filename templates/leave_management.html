@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+
+{% block title %}Leave Management | SmartHire Payroll{% endblock %}
+
+{% block page_heading %}Leave Management{% endblock %}
+{% block page_subheading %}Manage employee leave requests, leave policy, balances and approval status.{% endblock %}
+
+{% block content %}
+
+<div class="profile-layout">
+
+    <div class="card profile-card">
+        <span class="section-tag">LEAVE REQUEST</span>
+
+        <h1>Add Leave Request</h1>
+
+        <p class="profile-text">
+            Add employee leave details for payroll and attendance tracking.
+        </p>
+
+        <form method="POST" class="profile-form">
+
+            <div class="form-group full-row">
+                <label>Employee</label>
+                <select name="emp_code" required>
+                    <option value="">Select Employee</option>
+                    {% for emp in employees %}
+                    <option value="{{ emp['emp_code'] }}">
+                        {{ emp['emp_code'] }} - {{ emp['employee_name'] }} - {{ emp['department'] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Leave Type</label>
+                <select name="leave_type" required>
+                    <option value="Casual Leave">Casual Leave</option>
+                    <option value="Sick Leave">Sick Leave</option>
+                    <option value="Paid Leave">Paid Leave</option>
+                    <option value="Unpaid Leave">Unpaid Leave</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Total Days</label>
+                <input type="number" step="0.5" name="total_days" placeholder="Example: 1, 1.5, 2" required>
+            </div>
+
+            <div class="form-group">
+                <label>Start Date</label>
+                <input type="date" name="start_date" required>
+            </div>
+
+            <div class="form-group">
+                <label>End Date</label>
+                <input type="date" name="end_date" required>
+            </div>
+
+            <div class="form-group full-row">
+                <label>Reason</label>
+                <textarea name="reason" rows="3" placeholder="Reason for leave"></textarea>
+            </div>
+
+            <div class="form-group full-row">
+                <button type="submit">
+                    Save Leave Request
+                </button>
+            </div>
+
+        </form>
+    </div>
+
+    <div>
+        <div class="card profile-info-card">
+            <h2>Leave Policy Settings</h2>
+
+            <form method="POST" action="{{ url_for('update_leave_policy') }}">
+                <div class="form-group">
+                    <label>Casual Leave Limit</label>
+                    <input
+                        type="number"
+                        step="0.5"
+                        name="casual_leave_limit"
+                        value="{{ leave_policy['casual_leave_limit'] if leave_policy else 6 }}"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>Sick Leave Limit</label>
+                    <input
+                        type="number"
+                        step="0.5"
+                        name="sick_leave_limit"
+                        value="{{ leave_policy['sick_leave_limit'] if leave_policy else 6 }}"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label>Paid Leave Limit</label>
+                    <input
+                        type="number"
+                        step="0.5"
+                        name="paid_leave_limit"
+                        value="{{ leave_policy['paid_leave_limit'] if leave_policy else 12 }}"
+                        required
+                    >
+                </div>
+
+                <button type="submit">
+                    Save Leave Policy
+                </button>
+            </form>
+
+            <p class="hint">
+                Policy changes apply to new employee balances. Existing balances can be adjusted separately.
+            </p>
+        </div>
+
+        <div class="card profile-info-card">
+            <h2>Leave Policy Notes</h2>
+
+            <div class="feature-item">
+                <div class="feature-icon">🌿</div>
+                <div>
+                    <b>Leave Tracking</b>
+                    <span>Track leave date, type, total days and status.</span>
+                </div>
+            </div>
+
+            <div class="feature-item">
+                <div class="feature-icon">✅</div>
+                <div>
+                    <b>Approval Workflow</b>
+                    <span>Approve or reject leave requests from the table.</span>
+                </div>
+            </div>
+
+            <div class="feature-item">
+                <div class="feature-icon">💰</div>
+                <div>
+                    <b>Payroll Link</b>
+                    <span>Approved unpaid leave can later affect salary calculation.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% if leave_balances %}
+<div class="card">
+    <div class="table-header">
+        <div>
+            <h2>Leave Balances</h2>
+            <p>Employee-wise remaining leave balance.</p>
+        </div>
+
+        <span class="table-count">
+            {{ leave_balances|length }} Records
+        </span>
+    </div>
+
+    <p class="table-scroll-hint">Swipe left to view full leave balance details →</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Casual Leave</th>
+                    <th>Sick Leave</th>
+                    <th>Paid Leave</th>
+                    <th>Used Leave</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for row in leave_balances %}
+                <tr>
+                    <td>
+                        <div class="employee-cell">
+                            <div class="avatar-circle">
+                                {{ (row['employee_name'] or row['emp_code'])[0] }}
+                            </div>
+                            <div>
+                                <b>{{ row['employee_name'] or '-' }}</b>
+                                <span>{{ row['emp_code'] }}</span>
+                            </div>
+                        </div>
+                    </td>
+
+                    <td>
+                        <span class="dept-badge">
+                            {{ row['department'] or '-' }}
+                        </span>
+                    </td>
+
+                    <td><span class="badge pro">{{ row['casual_leave'] }}</span></td>
+                    <td><span class="badge pro">{{ row['sick_leave'] }}</span></td>
+                    <td><span class="badge pro">{{ row['paid_leave'] }}</span></td>
+                    <td><b>{{ row['used_leave'] }}</b></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if leave_requests %}
+<div class="card">
+    <div class="table-header">
+        <div>
+            <h2>Leave Requests</h2>
+            <p>Employee-wise leave request records.</p>
+        </div>
+
+        <span class="table-count">
+            {{ leave_requests|length }} Records
+        </span>
+    </div>
+
+    <p class="table-scroll-hint">Swipe left to view full leave request details →</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Leave Type</th>
+                    <th>Dates</th>
+                    <th>Days</th>
+                    <th>Status</th>
+                    <th>Reason</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for row in leave_requests %}
+                <tr>
+                    <td>
+                        <div class="employee-cell">
+                            <div class="avatar-circle">
+                                {{ (row['employee_name'] or row['emp_code'])[0] }}
+                            </div>
+                            <div>
+                                <b>{{ row['employee_name'] or '-' }}</b>
+                                <span>{{ row['emp_code'] }}</span>
+                            </div>
+                        </div>
+                    </td>
+
+                    <td>
+                        <span class="dept-badge">
+                            {{ row['department'] or '-' }}
+                        </span>
+                    </td>
+
+                    <td>{{ row['leave_type'] }}</td>
+
+                    <td>
+                        {{ row['start_date'] }} to {{ row['end_date'] }}
+                    </td>
+
+                    <td>
+                        <b>{{ row['total_days'] }}</b>
+                    </td>
+
+                    <td>
+                        {% if row['status'] == 'Approved' %}
+                            <span class="badge pro">Approved</span>
+                        {% elif row['status'] == 'Rejected' %}
+                            <span class="badge free">Rejected</span>
+                        {% else %}
+                            <span class="badge free">Pending</span>
+                        {% endif %}
+                    </td>
+
+                    <td>{{ row['reason'] or '-' }}</td>
+
+                    <td>
+                        {% if row['status'] == 'Pending' %}
+                        <div class="leave-action-row">
+
+                            <form
+                                method="POST"
+                                action="{{ url_for('approve_leave', leave_id=row['id']) }}"
+                                style="display:inline;"
+                            >
+                                <button
+                                    type="submit"
+                                    class="leave-approve-btn"
+                                    onclick="return confirm('Approve this leave request? Balance will be updated automatically.');"
+                                >
+                                    Approve
+                                </button>
+                            </form>
+
+                            <form
+                                method="POST"
+                                action="{{ url_for('reject_leave', leave_id=row['id']) }}"
+                                style="display:inline;"
+                            >
+                                <button
+                                    type="submit"
+                                    class="leave-reject-btn"
+                                    onclick="return confirm('Reject this leave request? Leave balance will not change.');"
+                                >
+                                    Reject
+                                </button>
+                            </form>
+
+                        </div>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card empty-state">
+    <div class="empty-icon">🌿</div>
+    <h2>No leave requests found</h2>
+    <p>Add employee leave records to start tracking leave management.</p>
+</div>
+{% endif %}
+
+{% endblock %}

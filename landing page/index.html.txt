@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Hiring Tool - SmartHireAI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+    <h1>🚀 Screen 100 Resumes in Minutes Using AI</h1>
+    <p>Stop wasting hours on manual resume screening. Let AI do it instantly.</p>
+    <a href="https://smarthireai-github-io.vercel.app" class="btn">Try Tool Now</a>
+</section>
+
+<!-- BLOG CONTENT -->
+<section class="section">
+    <h2>😩 The Problem with Manual Hiring</h2>
+    <p>
+        Hiring process aaj bhi kaafi companies ke liye slow aur frustrating hai.
+        Recruiters ko dozens ya hundreds resumes manually review karne padte hain.
+    </p>
+
+    <ul>
+        <li>⏳ Har CV par 5–10 minutes lagte hain</li>
+        <li>❌ Important candidates miss ho jate hain</li>
+        <li>🤯 Decision inconsistent ho jata hai</li>
+    </ul>
+</section>
+
+<section class="section light">
+    <h2>⚡ AI is Changing Hiring</h2>
+    <p>
+        Imagine karo agar aap sirf JD aur CV paste karo aur system automatically bata de:
+    </p>
+
+    <ul>
+        <li>📊 Match score</li>
+        <li>💪 Strengths</li>
+        <li>❌ Skill gaps</li>
+        <li>✅ Hiring recommendation</li>
+    </ul>
+</section>
+
+<!-- FEATURES -->
+<section class="section">
+    <h2>🤖 What This Tool Does</h2>
+    <div class="grid">
+        <div class="card">⚡ Instant Resume Analysis</div>
+        <div class="card">📊 Match Score</div>
+        <div class="card">💪 Strengths & Gaps</div>
+        <div class="card">✅ Hiring Recommendation</div>
+        <div class="card">📑 PDF Report</div>
+    </div>
+</section>
+
+<!-- CTA SECTION -->
+<section class="cta">
+    <h2>🚀 Try the AI Hiring Tool</h2>
+    <p>
+        Stop manual screening and start making faster hiring decisions today.
+    </p>
+    <a href="https://smarthireai-github-io.vercel.app" class="btn">Try Now</a>
+</section>
+
+<!-- FINAL TRUST SECTION -->
+<section class="section">
+    <h2>💡 Why SmartHireAI?</h2>
+    <p>
+        Designed for recruiters, founders, and hiring managers who want to save time
+        and make smarter decisions using AI.
+    </p>
+</section>
+
+</body>
+</html>

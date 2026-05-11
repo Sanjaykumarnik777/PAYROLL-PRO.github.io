@@ -1,0 +1,520 @@
+{% extends "base.html" %}
+
+{% block title %}Full & Final | SmartHire Payroll{% endblock %}
+
+{% block page_heading %}Full & Final{% endblock %}
+{% block page_subheading %}
+Create employee exit settlement with auto salary, paid leave encashment and final payable calculation.
+{% endblock %}
+
+{% block content %}
+
+<div class="card fnf-hero-card">
+
+    <span class="section-tag">EXIT MANAGEMENT</span>
+
+    <h1>Full & Final Settlement</h1>
+
+    <p class="fnf-hero-text">
+        Select employee, last working day and settlement month. The system will automatically calculate
+        paid days, earned salary, paid leave encashment, total earnings, deductions and final payable.
+    </p>
+
+    <form method="POST" class="fnf-form premium-fnf-form">
+
+        <div class="form-group">
+            <label>Employee</label>
+            <select name="emp_code" id="emp_code" required>
+                <option
+                    value=""
+                    data-salary="0"
+                    data-paid-leave="0"
+                    data-name=""
+                    data-role=""
+                    data-department=""
+                >
+                    Select Employee
+                </option>
+
+                {% for emp in employees %}
+                <option
+                    value="{{ emp['emp_code'] }}"
+                    data-salary="{{ emp['monthly_salary'] or 0 }}"
+                    data-paid-leave="{{ emp['paid_leave'] if emp['paid_leave'] is defined else 0 }}"
+                    data-name="{{ emp['employee_name'] or '' }}"
+                    data-role="{{ emp['role'] or '' }}"
+                    data-department="{{ emp['department'] or '' }}"
+                >
+                    {{ emp['emp_code'] }} - {{ emp['employee_name'] }} - {{ emp['department'] }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Last Working Day</label>
+            <input type="date" name="last_working_day" id="last_working_day" required>
+        </div>
+
+        <div class="form-group">
+            <label>Settlement Month</label>
+            <input type="month" name="settlement_month" id="settlement_month" required>
+        </div>
+
+        <div class="form-group">
+            <label>Apply Paid Leave Encashment?</label>
+            <select name="apply_leave_encashment" id="apply_leave_encashment">
+                 <option value="no">No - Do not add leave encashment</option>
+                 <option value="yes">Yes - Add paid leave encashment</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Reason for Leaving</label>
+            <input type="text" name="reason" placeholder="Resignation / Termination / Retirement">
+        </div>
+
+        <div class="form-group">
+            <label>Bonus Payable</label>
+            <input type="number" step="0.01" min="0" name="bonus_payable" id="bonus_payable" placeholder="0">
+        </div>
+
+        <div class="form-group">
+            <label>Gratuity Payable</label>
+            <input type="number" step="0.01" min="0" name="gratuity_payable" id="gratuity_payable" placeholder="0">
+        </div>
+
+        <div class="form-group">
+            <label>Other Earnings</label>
+            <input type="number" step="0.01" min="0" name="other_earnings" id="other_earnings" placeholder="0">
+        </div>
+
+        <div class="form-group">
+            <label>Notice Recovery</label>
+            <input type="number" step="0.01" min="0" name="notice_recovery" id="notice_recovery" placeholder="0">
+        </div>
+
+        <div class="form-group">
+            <label>Loan Recovery</label>
+            <input type="number" step="0.01" min="0" name="loan_recovery" id="loan_recovery" placeholder="0">
+        </div>
+
+        <div class="form-group">
+            <label>Advance Recovery</label>
+            <input type="number" step="0.01" min="0" name="advance_recovery" id="advance_recovery" placeholder="0">
+        </div>
+
+        <div class="form-group">
+            <label>Other Deductions</label>
+            <input type="number" step="0.01" min="0" name="other_deductions" id="other_deductions" placeholder="0">
+        </div>
+
+        <div class="form-group full-row">
+            <label>Remarks</label>
+            <textarea name="remarks" placeholder="Settlement remarks" rows="3"></textarea>
+        </div>
+
+        <div class="fnf-preview premium-preview-card">
+            <div class="table-header">
+                <div>
+                    <span class="section-tag">AUTO PREVIEW</span>
+                    <h2>Settlement Preview</h2>
+                    <p>System-generated F&F calculation before saving.</p>
+                </div>
+            </div>
+
+            <div class="preview-grid">
+                <div>
+                    <span>Employee Name</span>
+                    <b id="preview_employee_name">-</b>
+                </div>
+
+                <div>
+                    <span>Department</span>
+                    <b id="preview_department">-</b>
+                </div>
+
+                <div>
+                    <span>Monthly Salary</span>
+                    <b id="preview_monthly_salary">₹0</b>
+                </div>
+
+                <div>
+                    <span>Per Day Salary</span>
+                    <b id="preview_per_day_salary">₹0</b>
+                </div>
+
+                <div>
+                    <span>Paid Days</span>
+                    <b id="preview_paid_days">0</b>
+                </div>
+
+                <div>
+                    <span>Earned Salary</span>
+                    <b id="preview_earned_salary">₹0</b>
+                </div>
+
+                <div>
+                    <span>Paid Leave Balance</span>
+                    <b id="preview_leave_balance">0</b>
+                </div>
+
+                <div>
+                    <span>Leave Encashment</span>
+                    <b id="preview_leave_encashment">₹0</b>
+                </div>
+
+                <div>
+                    <span>Total Earnings</span>
+                    <b id="preview_total_earnings">₹0</b>
+                </div>
+
+                <div>
+                    <span>Total Deductions</span>
+                    <b id="preview_total_deductions">₹0</b>
+                </div>
+
+                <div class="final-preview">
+                    <span>Final Payable</span>
+                    <b id="preview_final_payable">₹0</b>
+                </div>
+            </div>
+
+            <p class="hint">
+    Paid days are calculated from the last working day on a fixed 30-day salary basis.
+    Paid leave encashment is added only when HR selects “Yes”.
+</p>
+        </div>
+
+        <button
+            type="submit"
+            onclick="return confirm('Create Full & Final settlement for this employee?');"
+        >
+            Calculate & Save F&F
+        </button>
+    </form>
+</div>
+
+{% if settlements %}
+
+<div class="stats">
+    <div class="card stat-card">
+        <div class="stat-icon">📋</div>
+        <h3>Total Settlements</h3>
+        <h2>{{ total_settlements|default(settlements|length) }}</h2>
+        <p>Full & Final records</p>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon">💰</div>
+        <h3>Total Earnings</h3>
+        <h2>₹{{ total_earnings|default(0) }}</h2>
+        <p>Settlement earnings</p>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon">📉</div>
+        <h3>Total Deductions</h3>
+        <h2>₹{{ total_deductions|default(0) }}</h2>
+        <p>Recoveries and deductions</p>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon">✅</div>
+        <h3>Final Payable</h3>
+        <h2>₹{{ total_final_payable|default(0) }}</h2>
+        <p>Total payable amount</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-header">
+        <div>
+            <h2>F&F Settlement Records</h2>
+            <p>Employee-wise settlement and final payout records.</p>
+        </div>
+
+        <span class="table-count">
+            {{ settlements|length }} Records
+        </span>
+    </div>
+
+    <p class="table-scroll-hint">Swipe left to view full settlement details →</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Last Working Day</th>
+                    <th>Month</th>
+                    <th>Paid Days</th>
+                    <th>Earned Salary</th>
+                    <th>Leave Balance</th>
+                    <th>Leave Encashment</th>
+                    <th>Total Earnings</th>
+                    <th>Total Deductions</th>
+                    <th>Final Payable</th>
+                    <th>Created</th>
+                    <th>Excel</th>
+                    <th>PDF</th>
+                    <th>Delete</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for row in settlements %}
+                <tr>
+                    <td>
+                        <div class="employee-cell payroll-employee-cell">
+                            <div class="avatar-circle">
+                                {{ (row['employee_name'] or row['emp_code'])[0] }}
+                            </div>
+
+                            <div class="employee-meta">
+                                <b>{{ row['employee_name'] or '-' }}</b>
+
+                                <span class="employee-code">
+                                    {{ row['emp_code'] }}
+                                </span>
+
+                                <span class="employee-role">
+                                    {{ row['role'] or '-' }}
+                                </span>
+                            </div>
+                        </div>
+                    </td>
+
+                    <td>
+                        <span class="dept-badge">
+                            {{ row['department'] or '-' }}
+                        </span>
+                    </td>
+
+                    <td>{{ row['last_working_day'] }}</td>
+
+                    <td>{{ row['settlement_month'] }}</td>
+
+                    <td>
+                        <span class="badge free">
+                            {{ row['paid_days']|default(0)|round|int }}
+                        </span>
+                    </td>
+
+                    <td>₹{{ row['earned_salary']|default(0)|round|int }}</td>
+
+                    <td>{{ row['leave_balance']|default(0)|round|int }}</td>
+
+                    <td>₹{{ row['leave_encashment']|default(0)|round|int }}</td>
+
+                    <td>₹{{ row['total_earnings']|default(0)|round|int }}</td>
+
+                    <td>₹{{ row['total_deductions']|default(0)|round|int }}</td>
+
+                    <td>
+                        <span class="badge pro">
+                            ₹{{ row['final_payable']|default(0)|round|int }}
+                        </span>
+                    </td>
+
+                    <td>{{ row['created_at'] }}</td>
+
+                    <td>
+                        <a href="{{ url_for('download_fnf_excel', settlement_id=row['id']) }}" class="small-btn">
+                            Excel
+                        </a>
+                    </td>
+
+                    <td>
+                        <a href="{{ url_for('download_fnf_pdf', settlement_id=row['id']) }}" class="small-btn">
+                            PDF
+                        </a>
+                    </td>
+
+                    <td>
+                        <form
+                            method="POST"
+                            action="{{ url_for('delete_fnf', settlement_id=row['id']) }}"
+                            style="display:inline;"
+                        >
+                            <button
+                                type="submit"
+                                class="danger-btn"
+                                onclick="return confirm('Are you sure you want to delete this F&F settlement?');"
+                            >
+                                Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% else %}
+
+<div class="card empty-state">
+
+    <div class="empty-icon">📋</div>
+
+    <h2>No Full & Final settlements found</h2>
+
+    <p>
+        Create a settlement record to generate F&F Excel/PDF reports.
+    </p>
+
+</div>
+
+{% endif %}
+
+<script>
+    function getNumber(id) {
+        const el = document.getElementById(id);
+
+        if (!el || el.value.trim() === "") {
+            return 0;
+        }
+
+        return parseFloat(el.value) || 0;
+    }
+
+    function formatMoney(value) {
+        return "₹" + Math.round(value).toLocaleString("en-IN");
+    }
+
+    function getPaidDaysFromLastWorkingDay() {
+        const lastWorkingDayInput = document.getElementById("last_working_day");
+
+        if (!lastWorkingDayInput || !lastWorkingDayInput.value) {
+            return 0;
+        }
+
+        const parts = lastWorkingDayInput.value.split("-");
+
+        if (parts.length !== 3) {
+            return 0;
+        }
+
+        return Math.min(parseInt(parts[2], 10) || 0, 30);
+    }
+
+    function syncSettlementMonth() {
+        const lastWorkingDayInput = document.getElementById("last_working_day");
+        const settlementMonthInput = document.getElementById("settlement_month");
+
+        if (!lastWorkingDayInput || !settlementMonthInput) {
+            return;
+        }
+
+        if (lastWorkingDayInput.value) {
+            settlementMonthInput.value = lastWorkingDayInput.value.slice(0, 7);
+        }
+    }
+
+    function updateFnfPreview() {
+        const empSelect = document.getElementById("emp_code");
+
+        if (!empSelect) {
+            return;
+        }
+
+        const selectedOption = empSelect.options[empSelect.selectedIndex];
+
+        const employeeName = selectedOption.getAttribute("data-name") || "-";
+        const department = selectedOption.getAttribute("data-department") || "-";
+        const monthlySalary = parseFloat(selectedOption.getAttribute("data-salary")) || 0;
+        const paidLeaveBalance = parseFloat(selectedOption.getAttribute("data-paid-leave")) || 0;
+
+        const perDaySalary = monthlySalary / 30;
+        const paidDays = getPaidDaysFromLastWorkingDay();
+
+        const earnedSalary = perDaySalary * paidDays;
+        const applyLeaveEncashmentEl = document.getElementById("apply_leave_encashment");
+        const applyLeaveEncashment = applyLeaveEncashmentEl ? applyLeaveEncashmentEl.value : "no";
+
+        let leaveEncashment = 0;
+
+        if (applyLeaveEncashment === "yes") {
+            leaveEncashment = perDaySalary * paidLeaveBalance;
+        }
+
+        const bonusPayable = getNumber("bonus_payable");
+        const gratuityPayable = getNumber("gratuity_payable");
+        const otherEarnings = getNumber("other_earnings");
+
+        const noticeRecovery = getNumber("notice_recovery");
+        const loanRecovery = getNumber("loan_recovery");
+        const advanceRecovery = getNumber("advance_recovery");
+        const otherDeductions = getNumber("other_deductions");
+
+        const totalEarnings =
+            earnedSalary +
+            leaveEncashment +
+            bonusPayable +
+            gratuityPayable +
+            otherEarnings;
+
+        const totalDeductions =
+            noticeRecovery +
+            loanRecovery +
+            advanceRecovery +
+            otherDeductions;
+
+        const finalPayable = totalEarnings - totalDeductions;
+
+        document.getElementById("preview_employee_name").innerText = employeeName || "-";
+        document.getElementById("preview_department").innerText = department || "-";
+        document.getElementById("preview_monthly_salary").innerText = formatMoney(monthlySalary);
+        document.getElementById("preview_per_day_salary").innerText = formatMoney(perDaySalary);
+        document.getElementById("preview_paid_days").innerText = paidDays;
+        document.getElementById("preview_earned_salary").innerText = formatMoney(earnedSalary);
+        document.getElementById("preview_leave_balance").innerText = paidLeaveBalance;
+        document.getElementById("preview_leave_encashment").innerText = formatMoney(leaveEncashment);
+        document.getElementById("preview_total_earnings").innerText = formatMoney(totalEarnings);
+        document.getElementById("preview_total_deductions").innerText = formatMoney(totalDeductions);
+        document.getElementById("preview_final_payable").innerText = formatMoney(finalPayable);
+    }
+
+    const fnfInputs = [
+    "emp_code",
+    "last_working_day",
+    "settlement_month",
+    "apply_leave_encashment",
+    "bonus_payable",
+    "gratuity_payable",
+    "other_earnings",
+    "notice_recovery",
+    "loan_recovery",
+    "advance_recovery",
+    "other_deductions"
+];
+
+    fnfInputs.forEach(function(id) {
+        const el = document.getElementById(id);
+
+        if (el) {
+            el.addEventListener("input", function() {
+                if (id === "last_working_day") {
+                    syncSettlementMonth();
+                }
+
+                updateFnfPreview();
+            });
+
+            el.addEventListener("change", function() {
+                if (id === "last_working_day") {
+                    syncSettlementMonth();
+                }
+
+                updateFnfPreview();
+            });
+        }
+    });
+
+    updateFnfPreview();
+</script>
+
+{% endblock %}

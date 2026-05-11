@@ -1,78 +1,266 @@
 {% extends "base.html" %}
-{% block title %}Pricing{% endblock %}
+
+{% block title %}Pricing | SmartHire Payroll{% endblock %}
+
+{% block page_heading %}Pricing Plans{% endblock %}
+{% block page_subheading %}Free demo is currently active. Paid plans will be available soon.{% endblock %}
 
 {% block content %}
-<div class="card">
-    <h1>Choose Your Plan</h1>
 
-    {% if active_plan %}
-        <div class="flash" style="background:#ecfdf3; color:#166534;">
-            Your current plan is <strong>{{ active_plan.plan_name|upper }}</strong>.
-        </div>
-    {% else %}
-        <p>Upgrade to PRO to unlock premium features like Excel export.</p>
-    {% endif %}
+<div class="pricing-hero card">
+    <span class="section-tag">SMART PAYROLL SAAS</span>
 
-    <div style="margin-top:20px;">
-        <h2>PRO Plan - ₹999</h2>
-        <p>One-time demo payment / starter subscription</p>
+    <h1>Try SmartHire Payroll Free</h1>
 
-        {% if active_plan %}
-            <button disabled style="opacity:.65; cursor:not-allowed;">Already Active</button>
-        {% else %}
-            <button onclick="payNow(999)">Buy PRO</button>
-        {% endif %}
+    <p>
+        Run payroll in minutes, manage attendance and leaves, generate professional
+        payroll records and stay HR-ready from one simple dashboard.
+    </p>
+
+    <div class="pricing-trust-row">
+        <span>✅ Free demo available</span>
+        <span>✅ Up to 10 employees</span>
+        <span>✅ Paid subscription coming soon</span>
     </div>
 </div>
 
-<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-<script>
-function payNow(amount) {
-    fetch("/create-order", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ amount: amount })
-    })
-    .then(res => res.json())
-    .then(order => {
-        const options = {
-            key: "{{ razorpay_key }}",
-            amount: order.amount,
-            currency: "INR",
-            name: "SmartHire Payroll",
-            description: "PRO Plan",
-            order_id: order.id,
-            handler: function (response) {
-                fetch("/verify-payment", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify(response)
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.status === "success") {
-                        alert("Payment successful! PRO activated.");
-                        window.location.href = "/";
-                    } else {
-                        alert("Payment verification failed.");
-                    }
-                });
-            },
-            theme: {
-                color: "#2563eb"
-            }
-        };
+{% if not payments_enabled %}
+<div class="card pricing-disabled-notice">
+    <div>
+        <span class="section-tag">FREE DEMO ACTIVE</span>
+        <h2>Free Demo Access Available</h2>
+        <p>
+           SmartHire Payroll is currently available in free demo mode with up to 10 employees.
+           Paid PRO plans are being rolled out in phases and will be available soon.
+        </p>
+    </div>
+</div>
+{% endif %}
 
-        const rzp = new Razorpay(options);
-        rzp.open();
-    })
-    .catch(() => {
-        alert("Unable to create order");
-    });
+<div class="pricing-info-banner card">
+    <div>
+        <h2>{% if payments_enabled %}What happens after payment?{% else %}Current Access{% endif %}</h2>
+
+        {% if payments_enabled %}
+        <p>
+            After successful payment, your company account is upgraded to PRO automatically.
+            Existing active subscriptions are replaced with the latest plan validity.
+        </p>
+        {% else %}
+        <p>
+            You can create a company account and try the payroll system with up to 10 employees.
+            PRO downloads and paid subscription features will be available soon.
+        </p>
+        {% endif %}
+    </div>
+
+    <a href="{{ url_for('payments') }}" class="secondary-btn">
+        View Payment History
+    </a>
+</div>
+
+<div class="pricing-grid">
+    {% for key, plan in plans.items() %}
+    <div class="card pricing-card {% if plan.get('saving_text') %}popular-plan{% endif %}">
+
+        {% if plan.get("saving_text") %}
+        <div class="popular-ribbon">
+            Best Value
+        </div>
+        {% endif %}
+
+        <div class="pricing-card-header">
+            <div>
+                <h2>{{ plan["name"] }}</h2>
+                <p>{{ plan["label"] }}</p>
+            </div>
+
+            {% if plan.get("saving_text") %}
+                <span class="badge pro">{{ plan["saving_text"] }}</span>
+            {% else %}
+                <span class="badge free">Monthly</span>
+            {% endif %}
+        </div>
+
+        <div class="price-box">
+            <h1>₹{{ plan["price"] }}</h1>
+            <span>INR / {{ plan["label"] }}</span>
+        </div>
+
+        <ul class="pricing-features">
+            <li>Unlimited employees</li>
+            <li>Employee master upload</li>
+            <li>Monthly attendance upload</li>
+            <li>Leave management with balance tracking</li>
+            <li>Payroll calculation with PF / ESIC / PT / LWF</li>
+            <li>Professional PDF payslips</li>
+            <li>Bulk payslip ZIP download</li>
+            <li>Excel payroll export</li>
+            <li>HR Audit Report</li>
+            <li>Full & Final Excel/PDF</li>
+            <li>Payment history and subscription tracking</li>
+            <li>Priority support</li>
+        </ul>
+
+        {% if payments_enabled %}
+        <button
+            type="button"
+            class="pricing-btn"
+            data-plan-id="{{ plan['plan_id'] }}"
+            data-price="{{ plan['price'] }}"
+            data-plan-name="{{ plan['name'] }}"
+            onclick="payNowFromButton(this)"
+        >
+            {{ plan["button_text"] }}
+        </button>
+
+        <p class="pricing-note">
+            Payment is processed securely using Razorpay.
+        </p>
+        {% else %}
+        <button
+            type="button"
+            class="pricing-btn disabled-pricing-btn"
+            disabled
+        >
+            Subscription Coming Soon
+        </button>
+
+        <p class="pricing-note">
+            Paid PRO plans will be available soon.
+        </p>
+        {% endif %}
+
+    </div>
+    {% endfor %}
+</div>
+
+<div class="card">
+    <div class="table-header">
+        <div>
+            <span class="section-tag">PLAN COMPARISON</span>
+            <h2>PRO Features Included</h2>
+            <p>Everything required to run payroll for small and growing companies.</p>
+        </div>
+    </div>
+
+    <div class="quick-action-grid">
+        <div class="upload-rule-card">
+            <b>Payroll Processing</b>
+            <span>Run monthly payroll with salary, overtime, deductions and CTC.</span>
+        </div>
+
+        <div class="upload-rule-card">
+            <b>Leave + Attendance</b>
+            <span>Approved leaves and attendance directly impact payroll calculations.</span>
+        </div>
+
+        <div class="upload-rule-card">
+            <b>Reports</b>
+            <span>Export payroll Excel, HR audit report and employee-wise payslips.</span>
+        </div>
+
+        <div class="upload-rule-card">
+            <b>Compliance</b>
+            <span>PF, ESIC, professional tax, LWF, gratuity and bonus support.</span>
+        </div>
+
+        <div class="upload-rule-card">
+            <b>F&F Settlement</b>
+            <span>Create Full & Final settlement with Excel and PDF reports.</span>
+        </div>
+
+        <div class="upload-rule-card">
+            <b>Multi-company Ready</b>
+            <span>Company-wise login, data isolation and subscription tracking.</span>
+        </div>
+    </div>
+</div>
+
+{% if payments_enabled %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+<script>
+function payNowFromButton(button) {
+    const planId = button.dataset.planId;
+    const price = parseInt(button.dataset.price, 10);
+    const planName = button.dataset.planName;
+
+    if (!planId || !price || !planName) {
+        alert("Plan details missing. Please refresh the page and try again.");
+        return;
+    }
+
+    button.dataset.originalText = button.innerText;
+    button.disabled = true;
+    button.innerText = "Opening Payment...";
+
+    payNow(planId, price, planName, button);
+}
+
+function payNow(planId, price, planName, button) {
+    const options = {
+        key: "{{ razorpay_key_id }}",
+        amount: price * 100,
+        currency: "INR",
+        name: "SmartHire Payroll",
+        description: planName,
+
+        handler: function (response) {
+            const body =
+                "razorpay_payment_id=" + encodeURIComponent(response.razorpay_payment_id || "") +
+                "&razorpay_order_id=" + encodeURIComponent(response.razorpay_order_id || "") +
+                "&razorpay_signature=" + encodeURIComponent(response.razorpay_signature || "") +
+                "&plan_id=" + encodeURIComponent(planId) +
+                "&amount=" + encodeURIComponent(price);
+
+            fetch("/payment-success", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: body
+            })
+            .then(function (res) {
+                if (!res.ok) {
+                    throw new Error("Payment save failed");
+                }
+
+                return res.text();
+            })
+            .then(function () {
+                alert("Payment successful! " + planName + " activated.");
+                window.location.href = "/";
+            })
+            .catch(function (err) {
+                alert("Payment completed but activation failed. Please contact support.");
+                console.log(err);
+
+                if (button) {
+                    button.disabled = false;
+                    button.innerText = "Try Again";
+                }
+            });
+        },
+
+        modal: {
+            ondismiss: function () {
+                if (button) {
+                    button.disabled = false;
+                    button.innerText = button.dataset.originalText || "Choose Plan";
+                }
+            }
+        },
+
+        theme: {
+            color: "#2563eb"
+        }
+    };
+
+    const rzp = new Razorpay(options);
+    rzp.open();
 }
 </script>
+{% endif %}
+
 {% endblock %}

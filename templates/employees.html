@@ -1,29 +1,199 @@
 {% extends "base.html" %}
-{% block title %}Employees{% endblock %}
+
+{% block title %}Employees | SmartHire Payroll{% endblock %}
+
+{% block page_heading %}Employees{% endblock %}
+{% block page_subheading %}Manage employee master data, salary details, PF/ESIC and bank records.{% endblock %}
+
 {% block content %}
-<div class="card">
-    <h1>Employees</h1>
-    <table>
-        <tr>
-            <th>Code</th>
-            <th>Name</th>
-            <th>Role</th>
-            <th>Department</th>
-            <th>Gender</th>
-            <th>Salary</th>
-            <th>Tax Regime</th>
-        </tr>
-        {% for row in employees %}
-        <tr>
-            <td>{{ row.emp_code }}</td>
-            <td>{{ row.employee_name }}</td>
-            <td>{{ row.role }}</td>
-            <td>{{ row.department }}</td>
-            <td>{{ row.gender }}</td>
-            <td>₹{{ row.monthly_salary }}</td>
-            <td>{{ row.tax_regime }}</td>
-        </tr>
-        {% endfor %}
-    </table>
+
+<div class="card employee-summary-card">
+    <div class="employee-summary-top">
+        <div>
+            <span class="section-tag">EMPLOYEE MASTER</span>
+            <h2>Employee Records</h2>
+            <p>Search, filter and manage payroll-ready employee master data.</p>
+        </div>
+
+        <div class="employee-count-box">
+            <span>Total Employees</span>
+            <h1>{{ total_employees|default(employees|length if employees else 0) }}</h1>
+        </div>
+    </div>
+
+    <form method="GET" class="filter-form employee-filter-form">
+        <select name="department">
+            <option value="">All Departments</option>
+            {% for dept in departments %}
+            <option value="{{ dept['department'] }}" {% if selected_department == dept['department'] %}selected{% endif %}>
+                {{ dept['department'] }}
+            </option>
+            {% endfor %}
+        </select>
+
+        <input
+            type="text"
+            name="search"
+            placeholder="Search employee / code / role"
+            value="{{ search }}"
+        >
+
+        <button type="submit">Apply Filter</button>
+
+        <a href="{{ url_for('employees_list') }}" class="secondary-btn">
+            Reset
+        </a>
+    </form>
+
+    <div class="action-row">
+        <a href="{{ url_for('download_employee_sample') }}" class="export-btn">
+            Download Sample
+        </a>
+
+        <a href="{{ url_for('upload_employees') }}" class="small-btn">
+            Upload Employees
+        </a>
+    </div>
 </div>
+
+{% if employees %}
+
+<div class="stats">
+    <div class="card stat-card">
+        <div class="stat-icon">👥</div>
+        <h3>Total Employees</h3>
+        <h2>{{ total_employees|default(employees|length) }}</h2>
+        <p>Employee master records</p>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon">🏢</div>
+        <h3>Departments</h3>
+        <h2>{{ total_departments|default(departments|length) }}</h2>
+        <p>Active departments</p>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon">💰</div>
+        <h3>Total Monthly Salary</h3>
+        <h2>₹{{ total_salary|default(0) }}</h2>
+        <p>Monthly salary base</p>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon">♀️</div>
+        <h3>Female Employees</h3>
+        <h2>{{ female_count|default(0) }}</h2>
+        <p>Gender-wise summary</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-header">
+        <div>
+            <h2>Employee Master</h2>
+            <p>Complete employee payroll, statutory and bank information.</p>
+        </div>
+
+        <span class="table-count">
+            {{ employees|length }} Records
+        </span>
+    </div>
+
+    <p class="table-scroll-hint">Swipe left to view full employee details →</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Gender</th>
+                    <th>Salary</th>
+                    <th>Tax Regime</th>
+                    <th>UAN No.</th>
+                    <th>ESIC No.</th>
+                    <th>Bank</th>
+                    <th>Account No.</th>
+                    <th>IFSC</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for row in employees %}
+                <tr>
+                    <td>
+                        <div class="employee-cell payroll-employee-cell">
+                            <div class="avatar-circle">
+                                {{ (row['employee_name'] or row['emp_code'])[0] }}
+                            </div>
+
+                            <div class="employee-meta">
+                                <b>{{ row['employee_name'] or '-' }}</b>
+
+                                <span class="employee-code">
+                                    {{ row['emp_code'] }}
+                                </span>
+
+                                <span class="employee-role">
+                                    {{ row['role'] or '-' }}
+                                </span>
+                            </div>
+                        </div>
+                    </td>
+
+                    <td>
+                        <span class="dept-badge">
+                            {{ row['department'] or 'General' }}
+                        </span>
+                    </td>
+
+                    <td>
+                        {{ row['gender']|default('-')|title }}
+                    </td>
+
+                    <td>
+                        <span class="salary-box">
+                            ₹{{ row['monthly_salary']|default(0)|round|int }}
+                        </span>
+                    </td>
+
+                    <td>
+                        {% if row['tax_regime'] %}
+                            <span class="badge free">{{ row['tax_regime']|upper }}</span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+
+                    <td>{{ row['uan_no'] or '-' }}</td>
+
+                    <td>{{ row['esic_no'] or '-' }}</td>
+
+                    <td>{{ row['bank_name'] or '-' }}</td>
+
+                    <td>{{ row['account_no'] or '-' }}</td>
+
+                    <td>{{ row['ifsc_code'] or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% else %}
+
+<div class="card empty-state">
+    <div class="empty-icon">👥</div>
+    <h2>No employees found</h2>
+    <p>Upload employee records to start payroll processing.</p>
+
+    <a href="{{ url_for('upload_employees') }}" class="primary-link">
+        Upload Employees
+    </a>
+</div>
+
+{% endif %}
+
 {% endblock %}

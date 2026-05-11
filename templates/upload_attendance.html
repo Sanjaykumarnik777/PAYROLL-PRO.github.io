@@ -1,12 +1,176 @@
 {% extends "base.html" %}
-{% block title %}Upload Attendance{% endblock %}
+
+{% block title %}Upload Attendance | SmartHire Payroll{% endblock %}
+
+{% block page_heading %}Upload Attendance{% endblock %}
+{% block page_subheading %}Upload monthly biometric attendance for payroll processing.{% endblock %}
+
 {% block content %}
-<div class="card">
-    <h1>Upload Biometric Attendance</h1>
-    <p>Required columns: emp_code, month, working_days, present_days, overtime_hours, bonus, manual_deduction</p>
-    <form method="POST" enctype="multipart/form-data">
-        <input type="file" name="file" required>
-        <button type="submit">Upload Attendance</button>
-    </form>
+
+<div class="upload-layout">
+
+    <div class="card upload-card">
+        <span class="section-tag">BIOMETRIC ATTENDANCE</span>
+
+        <h1>Upload Monthly Attendance</h1>
+
+        <p class="upload-text">
+            Upload employee-wise monthly attendance data for salary processing.
+            The system will validate employee codes, month format, working days,
+            present days, overtime, bonus and deductions before payroll run.
+        </p>
+
+        {% if session.get("error_report") %}
+        <div class="error-box">
+            <b>Upload failed.</b>
+            <span>
+                Some rows have errors. Download the error report, fix your file and upload again.
+            </span>
+        </div>
+        {% endif %}
+
+        <form method="POST" enctype="multipart/form-data" class="upload-form">
+            <label>Select Attendance File</label>
+
+            <input
+                type="file"
+                name="file"
+                accept=".csv,.xlsx"
+                required
+            >
+
+            <button type="submit">
+                Upload Attendance
+            </button>
+        </form>
+
+        <div class="action-row">
+            <a href="{{ url_for('download_attendance_sample') }}" class="secondary-btn">
+                Download Sample File
+            </a>
+
+            {% if session.get("error_report") %}
+            <a href="{{ url_for('download_error_report') }}" class="danger-btn">
+                Download Error Report
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card requirement-card">
+        <h2>Required File Format</h2>
+
+        <p>
+            Your Excel/CSV file must contain the following columns. Column names should be exactly the same.
+        </p>
+
+        <div class="column-grid">
+            <span>emp_code</span>
+            <span>month</span>
+            <span>working_days</span>
+            <span>present_days</span>
+            <span>overtime_hours</span>
+            <span>bonus</span>
+            <span>manual_deduction</span>
+        </div>
+
+        <div class="info-note">
+            Month format must be <b>YYYY-MM</b>, for example <b>2026-12</b>.
+        </div>
+    </div>
+
 </div>
+
+<div class="card">
+    <div class="table-header">
+        <div>
+            <span class="section-tag">UPLOAD RULES</span>
+            <h2>Attendance Upload Checks</h2>
+            <p>The system checks your file before saving attendance data.</p>
+        </div>
+    </div>
+
+    <div class="quick-action-grid">
+        <div class="upload-rule-card">
+            <b>Employee Code Check</b>
+            <span>Every emp_code must exist in Employee Master.</span>
+        </div>
+
+        <div class="upload-rule-card">
+            <b>Month Format</b>
+            <span>Month must be in YYYY-MM format.</span>
+        </div>
+
+        <div class="upload-rule-card">
+            <b>Present Days Check</b>
+            <span>Present days cannot be greater than working days.</span>
+        </div>
+
+        <div class="upload-rule-card">
+            <b>Duplicate Check</b>
+            <span>Same employee and same month cannot appear twice.</span>
+        </div>
+
+        <div class="upload-rule-card">
+            <b>Numeric Validation</b>
+            <span>Working days, overtime, bonus and deductions must be valid numbers.</span>
+        </div>
+
+        <div class="upload-rule-card">
+            <b>Replace Existing Month</b>
+            <span>Uploading the same month again will replace old attendance for that month.</span>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-header">
+        <div>
+            <span class="section-tag">SAMPLE DATA</span>
+            <h2>Example Attendance Format</h2>
+            <p>Use this format in your Excel or CSV file.</p>
+        </div>
+    </div>
+
+    <p class="table-scroll-hint">Swipe left to view full sample table →</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>emp_code</th>
+                    <th>month</th>
+                    <th>working_days</th>
+                    <th>present_days</th>
+                    <th>overtime_hours</th>
+                    <th>bonus</th>
+                    <th>manual_deduction</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                <tr>
+                    <td>EMP001</td>
+                    <td>2026-12</td>
+                    <td>30</td>
+                    <td>26</td>
+                    <td>2</td>
+                    <td>0</td>
+                    <td>0</td>
+                </tr>
+
+                <tr>
+                    <td>EMP002</td>
+                    <td>2026-12</td>
+                    <td>30</td>
+                    <td>24</td>
+                    <td>2</td>
+                    <td>0</td>
+                    <td>0</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
 {% endblock %}

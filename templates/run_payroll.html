@@ -1,11 +1,157 @@
 {% extends "base.html" %}
-{% block title %}Run Payroll{% endblock %}
+
+{% block title %}Run Payroll | SmartHire Payroll{% endblock %}
+
+{% block page_heading %}Run Payroll{% endblock %}
+{% block page_subheading %}
+Generate monthly payroll, salary calculations, deductions and payslips.
+{% endblock %}
+
 {% block content %}
-<div class="card">
-    <h1>Run Payroll</h1>
-    <form method="POST">
-        <input type="text" name="month" placeholder="Enter month (e.g. 2026-04)" required>
-        <button type="submit">Run Payroll</button>
-    </form>
+
+<div class="run-payroll-layout">
+
+    <div class="card payroll-process-card">
+
+        <span class="section-tag">MONTHLY PROCESSING</span>
+
+        <h1>Run Monthly Payroll</h1>
+
+        <p class="run-payroll-text">
+            Process employee salaries, attendance, paid leaves, LWP, overtime,
+            PF, ESIC, professional tax, deductions, CTC and payslips for the selected month.
+        </p>
+
+        <form method="POST" class="run-payroll-form">
+
+            <label>Select Payroll Month</label>
+
+            <input
+                type="month"
+                name="month"
+                required
+            >
+
+            <button
+                type="submit"
+                class="run-btn"
+                onclick="return confirm('Run payroll for selected month? Existing payroll for the same month will be replaced with the latest calculation.');"
+            >
+                Run Payroll
+            </button>
+
+        </form>
+
+        <div class="payroll-note-box">
+            <b>Important:</b>
+            <span>
+                If payroll for the selected month already exists, the system will mark old records as inactive
+                and create a fresh payroll run using the latest attendance and approved leave data.
+            </span>
+        </div>
+
+    </div>
+
+    <div class="card payroll-info-card">
+
+        <h2>Payroll Processing Includes</h2>
+
+        <div class="payroll-feature-list">
+
+            <div class="feature-item">
+                <div class="feature-icon">👥</div>
+                <div>
+                    <b>Employee Master</b>
+                    <span>Uses employee salary, department, role, tax regime and bank details.</span>
+                </div>
+            </div>
+
+            <div class="feature-item">
+                <div class="feature-icon">🕒</div>
+                <div>
+                    <b>Attendance Calculation</b>
+                    <span>Calculates salary based on working days, present days and overtime.</span>
+                </div>
+            </div>
+
+            <div class="feature-item">
+                <div class="feature-icon">🌿</div>
+                <div>
+                    <b>Leave Impact</b>
+                    <span>Approved paid leave protects salary, while approved LWP affects payable days.</span>
+                </div>
+            </div>
+
+            <div class="feature-item">
+                <div class="feature-icon">📉</div>
+                <div>
+                    <b>PF / ESIC / PT / LWF</b>
+                    <span>Automatic statutory deductions and employer contributions.</span>
+                </div>
+            </div>
+
+            <div class="feature-item">
+                <div class="feature-icon">📄</div>
+                <div>
+                    <b>Payslip Generation</b>
+                    <span>Generates professional PDF payslips with attendance and leave summary.</span>
+                </div>
+            </div>
+
+            <div class="feature-item">
+                <div class="feature-icon">📊</div>
+                <div>
+                    <b>Reports & Audit</b>
+                    <span>Creates payroll register, Excel export and HR audit report.</span>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
 </div>
+
+<div class="card">
+    <div class="table-header">
+        <div>
+            <span class="section-tag">BEFORE YOU RUN</span>
+            <h2>Payroll Readiness Checklist</h2>
+            <p>Complete these steps before processing monthly payroll.</p>
+        </div>
+    </div>
+
+    <div class="quick-action-grid">
+
+        <a href="{{ url_for('upload_employees') }}">
+            👥 Upload / Update Employees
+        </a>
+
+        <a href="{{ url_for('upload_attendance') }}">
+            🕒 Upload Attendance
+        </a>
+
+        <a href="{{ url_for('leave_management') }}">
+            🌿 Approve Pending Leaves
+        </a>
+
+        <a href="{{ url_for('compliance_settings') }}">
+            ⚙️ Check Compliance Settings
+        </a>
+
+        <a href="{{ url_for('payroll_history') }}">
+            📄 View Payroll History
+        </a>
+
+        <a href="{{ url_for('payroll_history') }}">
+    🛡️ HR Audit From Payroll History
+</a>
+
+    </div>
+
+    <p class="hint">
+        Tip: For HR Audit Report, first go to Payroll History, select a month, then download the audit report.
+    </p>
+</div>
+
 {% endblock %}

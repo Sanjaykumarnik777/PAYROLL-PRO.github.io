@@ -1,15 +1,165 @@
 {% extends "base.html" %}
-{% block title %}Register{% endblock %}
+
+{% block title %}Register | SmartHire Payroll{% endblock %}
+
 {% block content %}
-<div class="card auth-card">
-    <h1>Create Company Admin</h1>
-    <form method="POST">
-        <input type="text" name="company_name" placeholder="Company Name" required>
-        <input type="text" name="full_name" placeholder="Full Name" required>
-        <input type="text" name="username" placeholder="Username" required>
-        <input type="password" name="password" placeholder="Password" required>
-        <button type="submit">Register</button>
-    </form>
-    <p><a href="{{ url_for('login') }}">Already have an account? Login</a></p>
+
+<div class="auth-layout">
+
+    <div class="auth-left">
+
+        <div class="auth-brand">
+            <div class="auth-logo">SH</div>
+
+            <div>
+                <h2>SmartHire Payroll</h2>
+                <p>Payroll & HR SaaS Platform</p>
+            </div>
+        </div>
+
+        <div class="auth-demo-badge">
+            🚀 Free Demo Available — Up to 10 Employees
+        </div>
+
+        <h1>
+            Create your
+            company payroll
+            workspace.
+        </h1>
+
+        <p class="auth-description">
+            Set up your company payroll system with employee management,
+            attendance, leave tracking, salary processing, compliance, payslips
+            and HR reports.
+        </p>
+
+        <div class="auth-feature-list">
+
+            <div class="auth-feature">
+                <span>👥</span>
+                <p>Employee Master Management</p>
+            </div>
+
+            <div class="auth-feature">
+                <span>🕒</span>
+                <p>Attendance & Overtime Upload</p>
+            </div>
+
+            <div class="auth-feature">
+                <span>🌿</span>
+                <p>Leave Management & Balance Tracking</p>
+            </div>
+
+            <div class="auth-feature">
+                <span>💰</span>
+                <p>Automated Payroll Calculation</p>
+            </div>
+
+            <div class="auth-feature">
+                <span>📄</span>
+                <p>PDF Payslips, Excel Export & HR Audit</p>
+            </div>
+
+            <div class="auth-feature">
+                <span>🛡️</span>
+                <p>PF / ESIC / PT / LWF Compliance</p>
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="card auth-card premium-auth-card">
+
+        <span class="section-tag">COMPANY SETUP</span>
+
+        <h1>Create Company Admin</h1>
+
+        <p class="auth-subtext">
+            Register your company and start using SmartHire Payroll in free demo mode.
+        </p>
+
+        <div class="login-demo-note">
+            <b>Free Demo Mode Active</b>
+            <span>
+                You can try SmartHire Payroll with up to 10 employees.
+                Paid PRO plans will be available soon.
+            </span>
+        </div>
+
+        <form method="POST" class="auth-form">
+
+            <label>Company Name</label>
+            <input
+                type="text"
+                name="company_name"
+                placeholder="Enter company name"
+                required
+            >
+
+            <label>Company Address</label>
+            <textarea
+                name="company_address"
+                placeholder="Enter company address"
+                rows="3"
+                required
+            ></textarea>
+
+            <label>Company Email</label>
+            <input
+                type="email"
+                name="company_email"
+                placeholder="Enter company email"
+            >
+
+            <label>Company Phone</label>
+            <input
+                type="text"
+                name="company_phone"
+                placeholder="Enter company phone"
+            >
+
+            <label>Admin Full Name</label>
+            <input
+                type="text"
+                name="full_name"
+                placeholder="Enter admin full name"
+                required
+            >
+
+            <label>Username</label>
+            <input
+                type="text"
+                name="username"
+                placeholder="Create username"
+                required
+            >
+
+            <label>Password</label>
+            <input
+                type="password"
+                name="password"
+                placeholder="Create password"
+                required
+            >
+
+            <button type="submit">
+                Create Free Demo Account
+            </button>
+
+        </form>
+
+        <div class="auth-footer-link">
+            <p>
+                Already have an account?
+                <a href="{{ url_for('login') }}">
+                    Login
+                </a>
+            </p>
+        </div>
+
+    </div>
+
 </div>
+
 {% endblock %}
