@@ -3866,7 +3866,12 @@ def full_and_final():
             else:
                 leave_balance = 0
 
-            leave_encashment = money_round(per_day_salary * leave_balance)
+            apply_leave_encashment = request.form.get("apply_leave_encashment", "no")
+
+            if apply_leave_encashment == "yes":
+                leave_encashment = money_round(per_day_salary * leave_balance)
+            else:
+                leave_encashment = 0
 
             total_earnings = money_round(
                 earned_salary
