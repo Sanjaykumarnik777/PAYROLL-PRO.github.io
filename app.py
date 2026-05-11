@@ -3836,14 +3836,11 @@ def full_and_final():
                 return redirect(url_for("full_and_final"))
 
             # Auto paid days from last working day.
-            # Example: Last Working Day 2026-12-06 => paid_days = 6
+            # Fixed 30-day salary basis.
             paid_days = min(last_working_date_obj.day, 30)
 
             if paid_days < 0:
                paid_days = 0
-
-            if paid_days > 31:
-               paid_days = 31
 
             per_day_salary = monthly_salary / 30
             earned_salary = money_round(per_day_salary * paid_days)
@@ -3866,7 +3863,7 @@ def full_and_final():
             else:
                 leave_balance = 0
 
-            apply_leave_encashment = request.form.get("apply_leave_encashment", "no")
+            apply_leave_encashment = request.form.get("apply_leave_encashment", "no").strip().lower()
 
             if apply_leave_encashment == "yes":
                 leave_encashment = money_round(per_day_salary * leave_balance)
