@@ -3,25 +3,74 @@
 {% block title %}Pricing | SmartHire Payroll{% endblock %}
 
 {% block page_heading %}Pricing Plans{% endblock %}
-{% block page_subheading %}Free demo is currently active. Paid plans will be available soon.{% endblock %}
+{% block page_subheading %}
+{% if payments_enabled %}
+Choose a PRO plan to unlock unlimited payroll, payslips, reports and exports.
+{% else %}
+Free demo is currently active. Paid plans will be available soon.
+{% endif %}
+{% endblock %}
 
 {% block content %}
 
 <div class="pricing-hero card">
     <span class="section-tag">SMART PAYROLL SAAS</span>
 
-    <h1>Try SmartHire Payroll Free</h1>
-
-    <p>
-        Run payroll in minutes, manage attendance and leaves, generate professional
-        payroll records and stay HR-ready from one simple dashboard.
-    </p>
+    {% if active_plan and active_plan.get("is_pro") %}
+        <h1>Your PRO Plan is Active</h1>
+        <p>
+            Your workspace is currently on <b>{{ active_plan.get("plan", "PRO") }}</b>
+            and is valid till <b>{{ active_plan.get("end_date", "-") }}</b>.
+            You can renew or upgrade anytime.
+        </p>
+    {% else %}
+        <h1>Try SmartHire Payroll Free</h1>
+        <p>
+            Run payroll in minutes, manage attendance and leaves, generate professional
+            payroll records and stay HR-ready from one simple dashboard.
+        </p>
+    {% endif %}
 
     <div class="pricing-trust-row">
-        <span>✅ Free demo available</span>
-        <span>✅ Up to 10 employees</span>
-        <span>✅ Paid subscription coming soon</span>
+        {% if active_plan and active_plan.get("is_pro") %}
+            <span>✅ PRO features unlocked</span>
+            <span>✅ Unlimited employees</span>
+            <span>✅ Valid till {{ active_plan.get("end_date", "-") }}</span>
+        {% else %}
+            <span>✅ Free demo available</span>
+            <span>✅ Up to 10 employees</span>
+            {% if payments_enabled %}
+                <span>✅ Upgrade anytime</span>
+            {% else %}
+                <span>✅ Paid subscription coming soon</span>
+            {% endif %}
+        {% endif %}
     </div>
+</div>
+
+<div class="card pricing-current-plan">
+    <div>
+        <span class="section-tag">CURRENT WORKSPACE PLAN</span>
+
+        {% if active_plan and active_plan.get("is_pro") %}
+            <h2>{{ active_plan.get("plan", "PRO")|upper }} ACTIVE</h2>
+            <p>
+                Status: {{ active_plan.get("status", "active")|title }}
+                · Start: {{ active_plan.get("start_date", "-") }}
+                · Valid till: {{ active_plan.get("end_date", "-") }}
+            </p>
+        {% else %}
+            <h2>FREE PLAN</h2>
+            <p>
+                Free plan allows up to 10 employees. Upgrade to PRO for unlimited employees,
+                Excel export, PDF payslips, HR audit report and Full & Final reports.
+            </p>
+        {% endif %}
+    </div>
+
+    <a href="{{ url_for('payments') }}" class="secondary-btn">
+        View Payment History
+    </a>
 </div>
 
 {% if not payments_enabled %}
@@ -54,18 +103,29 @@
         {% endif %}
     </div>
 
-    <a href="{{ url_for('payments') }}" class="secondary-btn">
-        View Payment History
-    </a>
+    {% if active_plan and active_plan.get("is_pro") %}
+        <span class="badge pro">PRO ACTIVE</span>
+    {% else %}
+        <span class="badge free">FREE PLAN</span>
+    {% endif %}
 </div>
 
 <div class="pricing-grid">
     {% for key, plan in plans.items() %}
-    <div class="card pricing-card {% if plan.get('saving_text') %}popular-plan{% endif %}">
+
+    {% set is_active_plan = active_plan and active_plan.get("is_pro") and active_plan.get("plan", "")|lower == plan["name"]|lower %}
+
+    <div class="card pricing-card {% if plan.get('saving_text') %}popular-plan{% endif %} {% if is_active_plan %}active-pricing-card{% endif %}">
 
         {% if plan.get("saving_text") %}
         <div class="popular-ribbon">
             Best Value
+        </div>
+        {% endif %}
+
+        {% if is_active_plan %}
+        <div class="current-plan-ribbon">
+            Current Plan
         </div>
         {% endif %}
 
@@ -75,7 +135,9 @@
                 <p>{{ plan["label"] }}</p>
             </div>
 
-            {% if plan.get("saving_text") %}
+            {% if is_active_plan %}
+                <span class="badge pro">Active</span>
+            {% elif plan.get("saving_text") %}
                 <span class="badge pro">{{ plan["saving_text"] }}</span>
             {% else %}
                 <span class="badge free">Monthly</span>
@@ -93,6 +155,8 @@
             <li>Monthly attendance upload</li>
             <li>Leave management with balance tracking</li>
             <li>Payroll calculation with PF / ESIC / PT / LWF</li>
+            <li>Festival bonus and bonus CTC support</li>
+            <li>Employer contribution and monthly CTC tracking</li>
             <li>Professional PDF payslips</li>
             <li>Bulk payslip ZIP download</li>
             <li>Excel payroll export</li>
@@ -103,32 +167,38 @@
         </ul>
 
         {% if payments_enabled %}
-        <button
-            type="button"
-            class="pricing-btn"
-            data-plan-id="{{ plan['plan_id'] }}"
-            data-price="{{ plan['price'] }}"
-            data-plan-name="{{ plan['name'] }}"
-            onclick="payNowFromButton(this)"
-        >
-            {{ plan["button_text"] }}
-        </button>
+            <button
+                type="button"
+                class="pricing-btn {% if is_active_plan %}active-plan-btn{% endif %}"
+                data-plan-id="{{ plan['plan_id'] }}"
+                data-price="{{ plan['price'] }}"
+                data-plan-name="{{ plan['name'] }}"
+                onclick="payNowFromButton(this)"
+            >
+                {% if is_active_plan %}
+                    Renew Current Plan
+                {% elif active_plan and active_plan.get("is_pro") %}
+                    Switch / Renew - ₹{{ plan["price"] }}
+                {% else %}
+                    {{ plan["button_text"] }}
+                {% endif %}
+            </button>
 
-        <p class="pricing-note">
-            Payment is processed securely using Razorpay.
-        </p>
+            <p class="pricing-note">
+                Payment is processed securely using Razorpay.
+            </p>
         {% else %}
-        <button
-            type="button"
-            class="pricing-btn disabled-pricing-btn"
-            disabled
-        >
-            Subscription Coming Soon
-        </button>
+            <button
+                type="button"
+                class="pricing-btn disabled-pricing-btn"
+                disabled
+            >
+                Subscription Coming Soon
+            </button>
 
-        <p class="pricing-note">
-            Paid PRO plans will be available soon.
-        </p>
+            <p class="pricing-note">
+                Paid PRO plans will be available soon.
+            </p>
         {% endif %}
 
     </div>
@@ -147,7 +217,7 @@
     <div class="quick-action-grid">
         <div class="upload-rule-card">
             <b>Payroll Processing</b>
-            <span>Run monthly payroll with salary, overtime, deductions and CTC.</span>
+            <span>Run monthly payroll with salary, overtime, deductions, bonus and CTC.</span>
         </div>
 
         <div class="upload-rule-card">

@@ -7,6 +7,41 @@
 
 {% block content %}
 
+<style>
+    .launch-offer-card {
+        border: 1px solid #bbf7d0;
+        background: #f0fdf4;
+    }
+
+    .launch-offer-card h2 {
+        color: #166534;
+    }
+
+    .launch-offer-note {
+        margin-top: 12px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: #ffffff;
+        border: 1px dashed #86efac;
+        color: #166534;
+        font-weight: 700;
+        line-height: 1.6;
+    }
+
+    .launch-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        padding: 8px 13px;
+        font-weight: 900;
+        font-size: 12px;
+        background: #dcfce7;
+        color: #166534;
+        border: 1px solid #86efac;
+    }
+</style>
+
 <div class="card payment-summary-card">
 
     <div class="payment-summary-top">
@@ -26,6 +61,50 @@
         </div>
     </div>
 
+</div>
+
+<div class="card pricing-current-plan {% if campaign_free_mode %}launch-offer-card{% endif %}">
+    <div>
+        <span class="section-tag">CURRENT WORKSPACE PLAN</span>
+
+        {% if campaign_free_mode %}
+            <h2>FREE LAUNCH OFFER</h2>
+            <p>
+                All SmartHire Payroll features are temporarily unlocked under the launch campaign.
+                You can use payroll processing, payslip PDF, Excel reports, HR audit, leave management
+                and Full & Final settlement during this offer period.
+            </p>
+
+            <div class="launch-offer-note">
+                Launch offer active: enjoy full payroll access for a limited time. After the campaign ends,
+                paid subscription will be required to continue using premium downloads and advanced reports.
+            </div>
+
+        {% elif active_plan and active_plan.get("is_pro") %}
+            <h2>{{ active_plan.get("plan", "PRO")|upper }} ACTIVE</h2>
+            <p>
+                Status: {{ active_plan.get("status", "active")|title }}
+                · Start: {{ active_plan.get("start_date", "-") }}
+                · Valid till: {{ active_plan.get("end_date", "-") }}
+            </p>
+        {% else %}
+            <h2>FREE PLAN</h2>
+            <p>
+                You are currently using the free plan. Upgrade to PRO to unlock unlimited employees,
+                PDF payslips, Excel export, HR audit report and Full & Final reports.
+            </p>
+        {% endif %}
+    </div>
+
+    <a href="{{ url_for('pricing') }}" class="secondary-btn">
+        {% if campaign_free_mode %}
+            View Future Pricing
+        {% elif active_plan and active_plan.get("is_pro") %}
+            Renew / Upgrade Plan
+        {% else %}
+            View Pricing
+        {% endif %}
+    </a>
 </div>
 
 <div class="stats">
@@ -48,7 +127,7 @@
         <div class="stat-icon">⏳</div>
         <h3>Pending</h3>
         <h2>{{ pending_payments|default(0) }}</h2>
-        <p>Pending transactions</p>
+        <p>Pending / authorized transactions</p>
     </div>
 
     <div class="card stat-card">
@@ -63,38 +142,63 @@
 <div class="card">
     <div class="table-header">
         <div>
-            <span class="section-tag">CURRENT PLAN</span>
-            <h2>Subscription Status</h2>
+            <span class="section-tag">SUBSCRIPTION STATUS</span>
+            <h2>Plan Validity</h2>
             <p>Your active payroll subscription information.</p>
         </div>
 
-        {% if active_subscription %}
-            <span class="badge pro">ACTIVE</span>
+        {% if campaign_free_mode %}
+            <span class="launch-badge">FREE LAUNCH OFFER</span>
+        {% elif active_plan and active_plan.get("is_pro") %}
+            <span class="badge pro">PRO ACTIVE</span>
         {% else %}
             <span class="badge free">FREE PLAN</span>
         {% endif %}
     </div>
 
-    {% if active_subscription %}
+    {% if campaign_free_mode %}
+        <div class="quick-action-grid">
+            <div class="upload-rule-card">
+                <b>Campaign Status</b>
+                <span>Active</span>
+            </div>
+
+            <div class="upload-rule-card">
+                <b>Feature Access</b>
+                <span>All features unlocked</span>
+            </div>
+
+            <div class="upload-rule-card">
+                <b>Downloads</b>
+                <span>PDF & Excel allowed</span>
+            </div>
+
+            <div class="upload-rule-card">
+                <b>After Campaign</b>
+                <span>Subscription required</span>
+            </div>
+        </div>
+
+    {% elif active_plan and active_plan.get("is_pro") %}
         <div class="quick-action-grid">
             <div class="upload-rule-card">
                 <b>Plan Name</b>
-                <span>{{ active_subscription["plan_name"]|upper }}</span>
+                <span>{{ active_plan.get("plan", "PRO")|upper }}</span>
             </div>
 
             <div class="upload-rule-card">
                 <b>Status</b>
-                <span>{{ active_subscription["status"]|title }}</span>
+                <span>{{ active_plan.get("status", "active")|title }}</span>
             </div>
 
             <div class="upload-rule-card">
                 <b>Start Date</b>
-                <span>{{ active_subscription["start_date"] or "-" }}</span>
+                <span>{{ active_plan.get("start_date", "-") }}</span>
             </div>
 
             <div class="upload-rule-card">
                 <b>End Date</b>
-                <span>{{ active_subscription["end_date"] or "-" }}</span>
+                <span>{{ active_plan.get("end_date", "-") }}</span>
             </div>
         </div>
     {% else %}
@@ -134,6 +238,7 @@
                 <tr>
                     <th>Amount</th>
                     <th>Payment ID</th>
+                    <th>Order ID</th>
                     <th>Status</th>
                     <th>Date</th>
                 </tr>
@@ -157,13 +262,18 @@
                         </div>
                     </td>
 
-                    
+                    <td>
+                        <div class="payment-id">
+                            {{ row["order_id"] or "-" }}
+                        </div>
+                    </td>
+
                     <td>
                         {% if payment_status in ["success", "successful", "paid", "captured"] %}
                             <span class="badge pro">
                                 SUCCESS
                             </span>
-                        {% elif payment_status in ["pending", "created"] %}
+                        {% elif payment_status in ["pending", "created", "authorized"] %}
                             <span class="badge free">
                                 PENDING
                             </span>
@@ -198,13 +308,24 @@
 
     <h2>No payment history found</h2>
 
-    <p>
-        Your Razorpay subscription payment records will appear here after a successful payment.
-    </p>
+    {% if campaign_free_mode %}
+        <p>
+            No payment is required during the launch offer. Your payment records will appear here
+            after subscription payments start.
+        </p>
 
-    <a href="{{ url_for('pricing') }}" class="primary-link">
-        View Pricing
-    </a>
+        <a href="{{ url_for('pricing') }}" class="primary-link">
+            View Future Pricing
+        </a>
+    {% else %}
+        <p>
+            Your Razorpay subscription payment records will appear here after a successful payment.
+        </p>
+
+        <a href="{{ url_for('pricing') }}" class="primary-link">
+            View Pricing
+        </a>
+    {% endif %}
 
 </div>
 

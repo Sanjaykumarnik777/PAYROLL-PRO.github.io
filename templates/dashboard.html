@@ -4,279 +4,315 @@
 
 {% block page_heading %}Payroll Dashboard{% endblock %}
 {% block page_subheading %}
-A clear snapshot of your company payroll, attendance, subscription and salary payouts.
+Monthly payroll control center for attendance, salary processing, compliance and reports.
 {% endblock %}
 
 {% block content %}
 
-<div class="dashboard-hero">
-
+<div class="card payroll-command-center">
     <div>
-        <span class="eyebrow">Welcome back</span>
-
+        <span class="section-tag">PAYROLL CONTROL CENTER</span>
         <h1>{{ company_name }}</h1>
-
         <p>
-            Manage payroll operations, compliance,
-            employees and payouts from one clean dashboard.
+            Review payroll readiness, process salary, verify attendance, track CTC and generate reports from one workspace.
         </p>
-
-        <div class="hero-actions">
-            <a href="{{ url_for('run_payroll') }}" class="primary-link">
-                Run Payroll
-            </a>
-
-            <a href="{{ url_for('upload_attendance') }}" class="secondary-link">
-                Upload Attendance
-            </a>
-        </div>
     </div>
 
-    <div class="plan-panel">
+    <div class="command-actions">
+        <a href="{{ url_for('run_payroll') }}" class="primary-link">Run Payroll</a>
+        <a href="{{ url_for('upload_attendance') }}" class="secondary-btn">Upload Attendance</a>
+        <a href="{{ url_for('payroll_history') }}" class="secondary-btn">Payroll Register</a>
+    </div>
+</div>
+
+<div class="stats executive-kpis">
+
+    <div class="card stat-card">
+        <div class="stat-icon">EMP</div>
+        <h3>Total Employees</h3>
+        <h2>{{ employee_count|default(0) }}</h2>
+        <p>Employee master records</p>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon">ATT</div>
+        <h3>Attendance Records</h3>
+        <h2>{{ attendance_count|default(0) }}</h2>
+        <p>Monthly uploaded entries</p>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon">PAY</div>
+        <h3>Payroll Records</h3>
+        <h2>{{ payroll_count|default(0) }}</h2>
+        <p>Current payroll entries</p>
+    </div>
+
+    <a href="{{ url_for('leave_management') }}" class="card stat-card" style="text-decoration:none;color:inherit;">
+        <div class="stat-icon">LV</div>
+        <h3>Pending Leaves</h3>
+        <h2>{{ pending_leaves|default(0) }}</h2>
+        <p>Requests awaiting approval</p>
+    </a>
+
+</div>
+
+<div class="card payroll-summary-strip">
+    <div>
+        <span class="section-tag">LATEST PAYROLL</span>
+        <h2>{{ latest_payroll_month|default("-") }}</h2>
+        <p>Latest processed payroll month summary.</p>
+    </div>
+
+    <div class="summary-mini-grid">
+        <div>
+            <small>Employees Paid</small>
+            <b>{{ latest_month_employees|default(0) }}</b>
+        </div>
+
+        <div>
+            <small>Latest Gross</small>
+            <b>₹{{ latest_month_gross|default(0) }}</b>
+        </div>
+
+        <div>
+            <small>Latest Net Pay</small>
+            <b>₹{{ latest_month_net_pay|default(0) }}</b>
+        </div>
+
+        <div>
+            <small>Latest Monthly CTC</small>
+            <b>₹{{ latest_month_ctc|default(0) }}</b>
+        </div>
+
+        <div>
+            <small>Plan Status</small>
+            {% if plan_name and plan_name|lower != "free" %}
+                <b>{{ plan_name|upper }}</b>
+            {% else %}
+                <b>FREE</b>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="stats payroll-money-grid">
+
+    <div class="card stat-card salary-highlight">
+        <div class="stat-icon">₹</div>
+        <h3>Total Gross Salary</h3>
+        <h2>₹{{ total_gross|default(0) }}</h2>
+        <p>Before overtime, bonus and deductions</p>
+    </div>
+
+    <div class="card stat-card salary-highlight">
+        <div class="stat-icon">OT</div>
+        <h3>Total Overtime</h3>
+        <h2>₹{{ total_overtime_amount|default(0) }}</h2>
+        <p>Extra payout for overtime hours</p>
+    </div>
+
+    <div class="card stat-card salary-highlight">
+        <div class="stat-icon">BN</div>
+        <h3>Festival Bonus</h3>
+        <h2>₹{{ total_festival_bonus|default(0) }}</h2>
+        <p>Bonus paid in selected/current payroll</p>
+    </div>
+
+    <div class="card stat-card salary-highlight">
+        <div class="stat-icon">%</div>
+        <h3>Total Deductions</h3>
+        <h2>₹{{ total_deductions|default(0) }}</h2>
+        <p>PF, ESIC, PT, LWF and manual deductions</p>
+    </div>
+
+    <div class="card stat-card salary-highlight">
+        <div class="stat-icon">NP</div>
+        <h3>Total Net Pay</h3>
+        <h2>₹{{ total_net_pay|default(0) }}</h2>
+        <p>Final salary payable to employees</p>
+    </div>
+
+    <div class="card stat-card salary-highlight">
+        <div class="stat-icon">ER</div>
+        <h3>Employer Cost</h3>
+        <h2>₹{{ total_employer_cost|default(0) }}</h2>
+        <p>Employer PF, ESIC, gratuity and LWF</p>
+    </div>
+
+    <div class="card stat-card salary-highlight">
+        <div class="stat-icon">CTC</div>
+        <h3>Total Monthly CTC</h3>
+        <h2>₹{{ total_monthly_ctc|default(0) }}</h2>
+        <p>Gross + overtime + employer cost + bonus CTC</p>
+    </div>
+
+    <div class="card stat-card plan-compact-card">
+        <div class="stat-icon">PL</div>
+        <h3>Workspace Plan</h3>
 
         {% if plan_name and plan_name|lower != "free" %}
-
-            <span class="badge pro">PRO ACTIVE</span>
-
-            <h3>{{ plan_name|upper }}</h3>
-
-            <p>
-                Valid till <b>{{ subscription_end_date }}</b>
-            </p>
-
-            <p class="small-muted">
-                Employees:
-                <b>{{ employee_count }}</b> / Unlimited
-            </p>
-
+            <h2 class="plan-text">{{ plan_name|upper }}</h2>
+            <p>Active till {{ subscription_end_date }}</p>
         {% else %}
-
-            <span class="badge free">FREE DEMO</span>
-
-            <h3>FREE</h3>
-
-            <p>
-                You are currently using free demo access.
-            </p>
-
-            <p class="small-muted">
-                Employees:
-                <b>{{ employee_count }}</b> / 10
-            </p>
-
-            <a href="{{ url_for('pricing') }}" class="upgrade-link">
-                PRO Coming Soon
-            </a>
-
+            <h2 class="plan-text">FREE DEMO</h2>
+            <p>{{ employee_count|default(0) }} / 10 employees used</p>
         {% endif %}
-
     </div>
 
 </div>
 
-<div class="smart-alerts">
-
-    {% if pending_leaves|default(0) > 0 %}
-    <div class="alert-card warning">
-
-        <div class="alert-icon">🌿</div>
-
-        <div>
-            <h3>Pending Leave Requests</h3>
-
-            <p>
-                {{ pending_leaves }} leave request{% if pending_leaves != 1 %}s{% endif %} waiting for HR approval.
-            </p>
-        </div>
-
-        <a href="{{ url_for('leave_management') }}">
-            Review
-        </a>
-
+<div class="card payroll-summary-strip">
+    <div>
+        <span class="section-tag">COST RECONCILIATION</span>
+        <h2>Payroll Cost Snapshot</h2>
+        <p>Quick view of bonus accrual, employer liability and annualized CTC.</p>
     </div>
-    {% endif %}
 
-    {% if plan_name and plan_name|lower == "free" %}
-    <div class="alert-card warning">
-
-        <div class="alert-icon">⚠️</div>
-
+    <div class="summary-mini-grid">
         <div>
-            <h3>Free Demo Active</h3>
-
-            <p>
-                You can try SmartHire Payroll with up to 10 employees.
-                Paid PRO plans will be available soon.
-            </p>
+            <small>Bonus CTC</small>
+            <b>₹{{ total_bonus_ctc|default(0) }}</b>
         </div>
 
-        <a href="{{ url_for('pricing') }}">
-            View Plans
-        </a>
+        <div>
+            <small>PF Employer</small>
+            <b>₹{{ total_pf_employer|default(0) }}</b>
+        </div>
 
+        <div>
+            <small>Gratuity</small>
+            <b>₹{{ total_gratuity|default(0) }}</b>
+        </div>
+
+        <div>
+            <small>LWF Employer</small>
+            <b>₹{{ total_lwf_employer|default(0) }}</b>
+        </div>
+
+        <div>
+            <small>Annual CTC</small>
+            <b>₹{{ total_annual_ctc|default(0) }}</b>
+        </div>
+    </div>
+</div>
+
+{% if pending_leaves|default(0) > 0
+   or (plan_name and plan_name|lower == "free")
+   or attendance_count|default(0) == 0
+   or payroll_count|default(0) == 0
+   or employee_count|default(0) == 0 %}
+
+<div class="smart-alerts compact-alerts">
+
+    {% if employee_count|default(0) == 0 %}
+    <div class="alert-card info">
+        <div class="alert-icon">i</div>
+        <div>
+            <h3>Employee Master Pending</h3>
+            <p>Upload employee master data to start payroll processing.</p>
+        </div>
+        <a href="{{ url_for('upload_employees') }}">Upload</a>
     </div>
     {% endif %}
 
     {% if attendance_count|default(0) == 0 %}
     <div class="alert-card info">
-
-        <div class="alert-icon">🕒</div>
-
+        <div class="alert-icon">i</div>
         <div>
-            <h3>Attendance Not Uploaded</h3>
-
-            <p>
-                Upload monthly biometric attendance before running payroll.
-            </p>
+            <h3>Attendance Pending</h3>
+            <p>Upload attendance before running payroll.</p>
         </div>
-
-        <a href="{{ url_for('upload_attendance') }}">
-            Upload
-        </a>
-
+        <a href="{{ url_for('upload_attendance') }}">Upload</a>
     </div>
     {% endif %}
 
     {% if payroll_count|default(0) == 0 %}
-    <div class="alert-card danger">
-
-        <div class="alert-icon">📄</div>
-
+    <div class="alert-card warning">
+        <div class="alert-icon">!</div>
         <div>
             <h3>Payroll Not Processed</h3>
-
-            <p>
-                No payroll records found yet.
-                Run payroll after uploading employees and attendance.
-            </p>
+            <p>No payroll records found for current workspace.</p>
         </div>
-
-        <a href="{{ url_for('run_payroll') }}">
-            Run Payroll
-        </a>
-
+        <a href="{{ url_for('run_payroll') }}">Run</a>
     </div>
     {% endif %}
 
-    {% if employee_count|default(0) == 0 %}
+    {% if pending_leaves|default(0) > 0 %}
+    <div class="alert-card warning">
+        <div class="alert-icon">!</div>
+        <div>
+            <h3>Pending Leave Requests</h3>
+            <p>{{ pending_leaves }} request{% if pending_leaves != 1 %}s{% endif %} waiting for approval.</p>
+        </div>
+        <a href="{{ url_for('leave_management') }}">Review</a>
+    </div>
+    {% endif %}
+
+    {% if plan_name and plan_name|lower == "free" %}
     <div class="alert-card info">
-
-        <div class="alert-icon">👥</div>
-
+        <div class="alert-icon">i</div>
         <div>
-            <h3>No Employees Added</h3>
-
-            <p>
-                Upload employee master data to start using payroll features.
-            </p>
+            <h3>Free Demo Workspace</h3>
+            <p>Demo mode active. Upgrade to unlock Excel, payslips, audit reports and unlimited employees.</p>
         </div>
-
-        <a href="{{ url_for('upload_employees') }}">
-            Upload
-        </a>
-
+        <a href="{{ url_for('pricing') }}">Plans</a>
     </div>
     {% endif %}
 
 </div>
 
-<div class="stats">
+{% endif %}
 
-    <div class="card stat-card">
-        <div class="stat-icon">👥</div>
-        <h3>Total Employees</h3>
-        <h2>{{ employee_count|default(0) }}</h2>
-        <p>Active employee records</p>
-    </div>
+<div class="dashboard-main-grid">
 
-    <div class="card stat-card">
-        <div class="stat-icon">🕒</div>
-        <h3>Attendance Records</h3>
-        <h2>{{ attendance_count|default(0) }}</h2>
-        <p>Uploaded attendance entries</p>
-    </div>
-
-    <a href="{{ url_for('leave_management') }}" class="card stat-card" style="text-decoration: none; color: inherit;">
-        <div class="stat-icon">🌿</div>
-        <h3>Pending Leaves</h3>
-        <h2>{{ pending_leaves|default(0) }}</h2>
-        <p>Leave requests waiting for approval</p>
-    </a>
-
-    <div class="card stat-card">
-        <div class="stat-icon">📄</div>
-        <h3>Payroll Records</h3>
-        <h2>{{ payroll_count|default(0) }}</h2>
-        <p>Processed payroll runs</p>
-    </div>
-
-    <div class="card stat-card">
-        <div class="stat-icon">💰</div>
-        <h3>Total Gross Salary</h3>
-        <h2>₹{{ total_gross|default(0) }}</h2>
-        <p>Before deductions</p>
-    </div>
-
-    <div class="card stat-card">
-        <div class="stat-icon">✅</div>
-        <h3>Total Net Salary</h3>
-        <h2>₹{{ total_net_pay|default(0) }}</h2>
-        <p>Final payout amount</p>
-    </div>
-
-    <div class="card stat-card">
-        <div class="stat-icon">📉</div>
-        <h3>Total Deductions</h3>
-        <h2>₹{{ total_deductions|default(0) }}</h2>
-        <p>PF, ESIC, PT and other deductions</p>
-    </div>
-
-    <div class="card stat-card">
-        <div class="stat-icon">💎</div>
-        <h3>Current Plan</h3>
-        <h2 class="plan-text">
-            {{ plan_name|default("FREE")|upper }}
-        </h2>
-        <p>Subscription status</p>
-    </div>
-
-    <div class="card stat-card">
-        <div class="stat-icon">📅</div>
-        <h3>Plan Expiry</h3>
-        <h2 class="plan-text">
-            {{ subscription_end_date|default("-") }}
-        </h2>
-        <p>Renewal / expiry date</p>
-    </div>
-
-</div>
-
-<div class="card dashboard-chart-card">
-
-    <div class="table-header">
-        <div>
-            <h2>Payroll Trend</h2>
-
-            <p>
-                Monthly gross salary, net pay and deductions overview.
-            </p>
+    <div class="card dashboard-chart-card">
+        <div class="table-header">
+            <div>
+                <span class="section-tag">Payroll Analytics</span>
+                <h2>Payroll Trend</h2>
+                <p>Gross salary, net pay, deductions and monthly CTC overview.</p>
+            </div>
         </div>
+
+        {% if chart_labels and chart_labels|length > 0 %}
+            <canvas id="payrollTrendChart" height="90"></canvas>
+        {% else %}
+            <div class="chart-empty-state">
+                <div class="empty-icon">—</div>
+                <h2>No payroll trend yet</h2>
+                <p>Payroll trend will appear after your first payroll run.</p>
+                <a href="{{ url_for('run_payroll') }}" class="primary-link">Run Payroll</a>
+            </div>
+        {% endif %}
     </div>
 
-    {% if chart_labels and chart_labels|length > 0 %}
-        <canvas id="payrollTrendChart" height="110"></canvas>
-    {% else %}
-        <div class="chart-empty-state">
-            <div class="empty-icon">📊</div>
-            <h2>No payroll trend yet</h2>
-            <p>
-                Payroll trend will appear after your first payroll run.
-            </p>
-            <a href="{{ url_for('run_payroll') }}" class="primary-link">
-                Run Payroll
+    <div class="card dashboard-process-card">
+        <span class="section-tag">Process Flow</span>
+        <h2>Monthly Payroll Steps</h2>
+
+        <div class="process-list">
+            <a href="{{ url_for('upload_employees') }}">
+                <b>1. Employee Master</b>
+                <span>Upload or verify employee salary details</span>
+            </a>
+
+            <a href="{{ url_for('upload_attendance') }}">
+                <b>2. Attendance</b>
+                <span>Upload present days, weekly off, leave and LOP</span>
+            </a>
+
+            <a href="{{ url_for('run_payroll') }}">
+                <b>3. Run Payroll</b>
+                <span>Calculate salary, PF, ESIC, PT, LWF, bonus and net pay</span>
+            </a>
+
+            <a href="{{ url_for('payroll_history') }}">
+                <b>4. Reports</b>
+                <span>Download Excel, payslips and HR audit report</span>
             </a>
         </div>
-    {% endif %}
+    </div>
 
 </div>
 
@@ -287,92 +323,81 @@ A clear snapshot of your company payroll, attendance, subscription and salary pa
 const payrollCtx = document.getElementById("payrollTrendChart");
 
 if (payrollCtx) {
-
     new Chart(payrollCtx, {
-
         type: "line",
-
         data: {
-
             labels: {{ chart_labels|tojson }},
-
             datasets: [
-
                 {
                     label: "Gross Salary",
                     data: {{ chart_gross|tojson }},
-                    borderColor: "#2563eb",
-                    backgroundColor: "rgba(37,99,235,0.06)",
+                    borderColor: "#155eef",
+                    backgroundColor: "rgba(21, 94, 239, 0.08)",
                     fill: true,
-                    borderWidth: 3,
-                    tension: 0.4,
-                    pointRadius: 4,
-                    pointHoverRadius: 6
+                    borderWidth: 2,
+                    tension: 0.35,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
                 },
-
                 {
                     label: "Net Pay",
                     data: {{ chart_net_pay|tojson }},
-                    borderColor: "#22c55e",
-                    backgroundColor: "rgba(34,197,94,0.10)",
+                    borderColor: "#039855",
+                    backgroundColor: "rgba(3, 152, 85, 0.08)",
                     fill: false,
-                    borderWidth: 3,
-                    tension: 0.4,
-                    pointRadius: 4,
-                    pointHoverRadius: 6
+                    borderWidth: 2,
+                    tension: 0.35,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
                 },
-
                 {
                     label: "Deductions",
                     data: {{ chart_deductions|tojson }},
-                    borderColor: "#ef4444",
-                    backgroundColor: "rgba(239,68,68,0.10)",
+                    borderColor: "#d92d20",
+                    backgroundColor: "rgba(217, 45, 32, 0.08)",
                     fill: false,
-                    borderWidth: 3,
-                    tension: 0.4,
-                    pointRadius: 4,
-                    pointHoverRadius: 6
+                    borderWidth: 2,
+                    tension: 0.35,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
+                },
+                {
+                    label: "Monthly CTC",
+                    data: {{ chart_monthly_ctc|default([])|tojson }},
+                    borderColor: "#7c3aed",
+                    backgroundColor: "rgba(124, 58, 237, 0.08)",
+                    fill: false,
+                    borderWidth: 2,
+                    tension: 0.35,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
                 }
-
             ]
         },
-
         options: {
-
             responsive: true,
-
             plugins: {
                 legend: {
                     position: "bottom",
                     labels: {
                         usePointStyle: true,
-                        padding: 22,
+                        padding: 18,
                         font: {
-                            size: 13,
+                            size: 12,
                             weight: "600"
                         }
                     }
                 }
             },
-
             scales: {
                 x: {
-                    grid: {
-                        display: false
-                    },
-                    ticks: {
-                        color: "#64748b"
-                    }
+                    grid: { display: false },
+                    ticks: { color: "#667085" }
                 },
-
                 y: {
                     beginAtZero: true,
-                    grid: {
-                        color: "rgba(148,163,184,0.12)"
-                    },
-                    ticks: {
-                        color: "#64748b"
-                    }
+                    grid: { color: "rgba(152, 162, 179, 0.18)" },
+                    ticks: { color: "#667085" }
                 }
             }
         }
@@ -381,48 +406,25 @@ if (payrollCtx) {
 </script>
 {% endif %}
 
-<div class="quick-actions card">
-
-    <div>
-        <h2>Quick Actions</h2>
-
-        <p>
-            Common payroll tasks for daily HR operations.
-        </p>
+<div class="quick-actions card compact-quick-actions">
+    <div class="table-header">
+        <div>
+            <span class="section-tag">Operations</span>
+            <h2>Quick Actions</h2>
+            <p>Common HR and payroll actions.</p>
+        </div>
     </div>
 
-    <div class="quick-action-grid">
-
-        <a href="{{ url_for('upload_employees') }}">
-            Upload Employees
-        </a>
-
-        <a href="{{ url_for('employees_list') }}">
-            View Employees
-        </a>
-
-        <a href="{{ url_for('upload_attendance') }}">
-            Upload Attendance
-        </a>
-
-        <a href="{{ url_for('leave_management') }}">
-            Leave Management
-        </a>
-
-        <a href="{{ url_for('run_payroll') }}">
-            Run Payroll
-        </a>
-
-        <a href="{{ url_for('payroll_history') }}">
-            Payroll History
-        </a>
-
-        <a href="{{ url_for('payroll_history') }}">
-            HR Audit Report
-        </a>
-
+    <div class="quick-action-grid compact-action-grid">
+        <a href="{{ url_for('upload_employees') }}">Upload Employees</a>
+        <a href="{{ url_for('employees_list') }}">Employee Master</a>
+        <a href="{{ url_for('upload_attendance') }}">Upload Attendance</a>
+        <a href="{{ url_for('attendance_list') }}">Attendance Register</a>
+        <a href="{{ url_for('leave_management') }}">Leave Management</a>
+        <a href="{{ url_for('run_payroll') }}">Run Payroll</a>
+        <a href="{{ url_for('payroll_history') }}">Payroll History</a>
+        <a href="{{ url_for('payroll_history') }}">Reports & Audit</a>
     </div>
-
 </div>
 
 {% endblock %}

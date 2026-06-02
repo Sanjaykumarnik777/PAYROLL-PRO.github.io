@@ -34,7 +34,7 @@
         <input
             type="text"
             name="search"
-            placeholder="Search employee / code / role"
+            placeholder="Search employee / code / role / department"
             value="{{ search }}"
         >
 
@@ -81,6 +81,13 @@
     </div>
 
     <div class="card stat-card">
+        <div class="stat-icon">♂️</div>
+        <h3>Male Employees</h3>
+        <h2>{{ male_count|default(0) }}</h2>
+        <p>Gender-wise summary</p>
+    </div>
+
+    <div class="card stat-card">
         <div class="stat-icon">♀️</div>
         <h3>Female Employees</h3>
         <h2>{{ female_count|default(0) }}</h2>
@@ -116,11 +123,19 @@
                     <th>Bank</th>
                     <th>Account No.</th>
                     <th>IFSC</th>
+                    <th>Payroll Ready</th>
                 </tr>
             </thead>
 
             <tbody>
                 {% for row in employees %}
+
+                {% set has_uan = row['uan_no'] and row['uan_no']|string|trim != '' %}
+                {% set has_esic = row['esic_no'] and row['esic_no']|string|trim != '' %}
+                {% set has_bank = row['bank_name'] and row['bank_name']|string|trim != '' %}
+                {% set has_account = row['account_no'] and row['account_no']|string|trim != '' %}
+                {% set has_ifsc = row['ifsc_code'] and row['ifsc_code']|string|trim != '' %}
+
                 <tr>
                     <td>
                         <div class="employee-cell payroll-employee-cell">
@@ -162,19 +177,57 @@
                         {% if row['tax_regime'] %}
                             <span class="badge free">{{ row['tax_regime']|upper }}</span>
                         {% else %}
-                            -
+                            <span class="badge free">NEW</span>
                         {% endif %}
                     </td>
 
-                    <td>{{ row['uan_no'] or '-' }}</td>
+                    <td>
+                        {% if has_uan %}
+                            {{ row['uan_no'] }}
+                        {% else %}
+                            <span class="badge free">Missing</span>
+                        {% endif %}
+                    </td>
 
-                    <td>{{ row['esic_no'] or '-' }}</td>
+                    <td>
+                        {% if has_esic %}
+                            {{ row['esic_no'] }}
+                        {% else %}
+                            <span class="badge free">Missing</span>
+                        {% endif %}
+                    </td>
 
-                    <td>{{ row['bank_name'] or '-' }}</td>
+                    <td>
+                        {% if has_bank %}
+                            {{ row['bank_name'] }}
+                        {% else %}
+                            <span class="badge free">Missing</span>
+                        {% endif %}
+                    </td>
 
-                    <td>{{ row['account_no'] or '-' }}</td>
+                    <td>
+                        {% if has_account %}
+                            {{ row['account_no'] }}
+                        {% else %}
+                            <span class="badge free">Missing</span>
+                        {% endif %}
+                    </td>
 
-                    <td>{{ row['ifsc_code'] or '-' }}</td>
+                    <td>
+                        {% if has_ifsc %}
+                            {{ row['ifsc_code'] }}
+                        {% else %}
+                            <span class="badge free">Missing</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if has_bank and has_account and has_ifsc %}
+                            <span class="badge pro">Ready</span>
+                        {% else %}
+                            <span class="badge free">Check</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

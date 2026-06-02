@@ -3,7 +3,7 @@
 {% block title %}Attendance | SmartHire Payroll{% endblock %}
 
 {% block page_heading %}Attendance Data{% endblock %}
-{% block page_subheading %}View biometric attendance, overtime, bonus and manual deductions.{% endblock %}
+{% block page_subheading %}View attendance, weekly off, leave, overtime, bonus and deductions.{% endblock %}
 
 {% block content %}
 
@@ -35,7 +35,7 @@
         <input
             type="text"
             name="search"
-            placeholder="Search employee / code / role"
+            placeholder="Search employee / code / role / department"
             value="{{ search }}"
         >
 
@@ -53,6 +53,10 @@
 
         <a href="{{ url_for('upload_attendance') }}" class="small-btn">
             Upload Attendance
+        </a>
+
+        <a href="{{ url_for('run_payroll') }}" class="small-btn">
+            Run Payroll
         </a>
     </div>
 </div>
@@ -78,7 +82,49 @@
         <div class="stat-icon">✅</div>
         <h3>Present Days</h3>
         <h2>{{ total_present_days|default(0, true) }}</h2>
-        <p>Total present days</p>
+        <p>Attendance %: {{ attendance_percentage|default(0) }}%</p>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon">💰</div>
+        <h3>Paid Days</h3>
+        <h2>{{ total_paid_days|default(0, true) }}</h2>
+        <p>Paid days %: {{ paid_days_percentage|default(0) }}%</p>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon">📆</div>
+        <h3>Weekly Off</h3>
+        <h2>{{ total_weekly_off|default(0, true) }}</h2>
+        <p>Total weekly off days</p>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon">🌿</div>
+        <h3>Paid Leave</h3>
+        <h2>{{ total_paid_leave|default(0, true) }}</h2>
+        <p>Paid leave included</p>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon">🏖️</div>
+        <h3>Holidays</h3>
+        <h2>{{ total_holiday|default(0, true) }}</h2>
+        <p>Paid holidays</p>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon">⚠️</div>
+        <h3>LOP Days</h3>
+        <h2>{{ total_lop_days|default(0, true) }}</h2>
+        <p>Loss of pay days</p>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon">🚫</div>
+        <h3>Absent Days</h3>
+        <h2>{{ total_absent_days|default(0, true) }}</h2>
+        <p>Calculated absent days</p>
     </div>
 
     <div class="card stat-card">
@@ -103,6 +149,41 @@
     </div>
 </div>
 
+<div class="card payroll-summary-strip">
+    <div>
+        <span class="section-tag">ATTENDANCE SUMMARY</span>
+        <h2>Month Attendance Health</h2>
+        <p>Quick view of attendance quality before payroll processing.</p>
+    </div>
+
+    <div class="summary-mini-grid">
+        <div>
+            <small>Attendance %</small>
+            <b>{{ attendance_percentage|default(0) }}%</b>
+        </div>
+
+        <div>
+            <small>Paid Days %</small>
+            <b>{{ paid_days_percentage|default(0) }}%</b>
+        </div>
+
+        <div>
+            <small>Total LOP</small>
+            <b>{{ total_lop_days|default(0) }}</b>
+        </div>
+
+        <div>
+            <small>Overtime Hours</small>
+            <b>{{ total_overtime_hours|default(0) }}</b>
+        </div>
+
+        <div>
+            <small>Manual Deduction</small>
+            <b>₹{{ total_manual_deduction|default(0) }}</b>
+        </div>
+    </div>
+</div>
+
 <div class="card">
     <div class="table-header">
         <div>
@@ -124,16 +205,29 @@
                     <th>Month</th>
                     <th>Working Days</th>
                     <th>Present Days</th>
+                    <th>Weekly Off</th>
+                    <th>Paid Leave</th>
+                    <th>Holiday</th>
+                    <th>LOP Days</th>
+                    <th>Paid Days</th>
                     <th>Absent Days</th>
                     <th>Overtime</th>
                     <th>Bonus</th>
                     <th>Manual Deduction</th>
+                    <th>Status</th>
                 </tr>
             </thead>
 
             <tbody>
                 {% for row in rows %}
-                {% set absent_days = (row['working_days']|float) - (row['present_days']|float) %}
+                {% set absent_days = (row['working_days']|float) - (row['present_days']|float) - (row['weekly_off']|default(0)|float) - (row['paid_leave']|default(0)|float) - (row['holiday']|default(0)|float) %}
+                {% if absent_days < 0 %}
+                    {% set absent_days = 0 %}
+                {% endif %}
+
+                {% set row_paid_days = row['paid_days']|default(0)|float %}
+                {% set row_working_days = row['working_days']|default(0)|float %}
+
                 <tr>
                     <td>
                         <div class="employee-cell payroll-employee-cell">
@@ -163,13 +257,31 @@
 
                     <td>{{ row['month'] }}</td>
 
+                    <td><b>{{ row['working_days']|default(0)|round|int }}</b></td>
+
                     <td>
-                        <b>{{ row['working_days']|round|int }}</b>
+                        <span class="badge pro">
+                            {{ row['present_days']|default(0)|round|int }}
+                        </span>
+                    </td>
+
+                    <td>{{ row['weekly_off']|default(0)|round|int }}</td>
+                    <td>{{ row['paid_leave']|default(0)|round|int }}</td>
+                    <td>{{ row['holiday']|default(0)|round|int }}</td>
+
+                    <td>
+                        {% if row['lop_days']|default(0)|float > 0 %}
+                            <span class="badge free">
+                                {{ row['lop_days']|round|int }}
+                            </span>
+                        {% else %}
+                            0
+                        {% endif %}
                     </td>
 
                     <td>
                         <span class="badge pro">
-                            {{ row['present_days']|round|int }}
+                            {{ row['paid_days']|default(0)|round|int }}
                         </span>
                     </td>
 
@@ -192,6 +304,16 @@
                     </td>
 
                     <td>₹{{ row['manual_deduction']|default(0)|round|int }}</td>
+
+                    <td>
+                        {% if row_paid_days >= row_working_days %}
+                            <span class="badge pro">Full Paid</span>
+                        {% elif row_paid_days > 0 %}
+                            <span class="badge free">Partial</span>
+                        {% else %}
+                            <span class="badge free">Check</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

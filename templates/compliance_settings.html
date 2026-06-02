@@ -3,26 +3,392 @@
 {% block title %}Compliance Settings | SmartHire Payroll{% endblock %}
 
 {% block page_heading %}Compliance Settings{% endblock %}
-{% block page_subheading %}Manage PF, ESIC, gratuity, bonus and TDS rules company-wise.{% endblock %}
+{% block page_subheading %}Manage statutory compliance, payroll policy and festival bonus rules.{% endblock %}
 
 {% block content %}
+
+<style>
+    .compliance-hero {
+        border-radius: 18px;
+        margin-bottom: 18px;
+    }
+
+    .compliance-hero p {
+        max-width: 920px;
+        color: #64748b;
+        line-height: 1.7;
+    }
+
+    .compliance-premium-form {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+    }
+
+    .compliance-section {
+        border-radius: 18px;
+        overflow: hidden;
+    }
+
+    .compliance-section-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        margin-bottom: 18px;
+    }
+
+    .compliance-section-header h2 {
+        margin: 0 0 5px;
+        font-size: 20px;
+        color: #111827;
+    }
+
+    .compliance-section-header p {
+        margin: 0;
+        color: #64748b;
+        line-height: 1.6;
+    }
+
+    .feature-icon {
+        width: 42px;
+        height: 42px;
+        min-width: 42px;
+        border-radius: 14px;
+        background: #111827;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        font-size: 13px;
+    }
+
+    .settings-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(180px, 1fr));
+        gap: 16px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+    }
+
+    .form-group label {
+        font-size: 13px;
+        font-weight: 800;
+        color: #111827;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        min-height: 42px;
+        border-radius: 11px;
+        border: 1px solid #e5e7eb;
+        padding: 10px 12px;
+        font-size: 14px;
+        outline: none;
+        background: #ffffff;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        border-color: #111827;
+        box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
+    }
+
+    .field-help {
+        color: #64748b;
+        font-size: 12px;
+        line-height: 1.45;
+    }
+
+    .payroll-note-box {
+        margin-top: 18px;
+        padding: 14px 16px;
+        border: 1px solid #e5e7eb;
+        background: #f9fafb;
+        border-radius: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        color: #374151;
+        line-height: 1.6;
+    }
+
+    .payroll-note-box b {
+        color: #111827;
+    }
+
+    .compliance-preview-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(160px, 1fr));
+        gap: 12px;
+        margin-top: 18px;
+    }
+
+    .compliance-preview-item {
+        border: 1px solid #e5e7eb;
+        background: #ffffff;
+        border-radius: 14px;
+        padding: 13px;
+    }
+
+    .compliance-preview-item span {
+        display: block;
+        color: #64748b;
+        font-size: 12px;
+        margin-bottom: 6px;
+    }
+
+    .compliance-preview-item b {
+        display: block;
+        color: #111827;
+        font-size: 16px;
+    }
+
+    .compliance-save-bar {
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        position: sticky;
+        bottom: 16px;
+        z-index: 5;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+    }
+
+    .compliance-save-bar h3 {
+        margin: 0 0 4px;
+        color: #111827;
+    }
+
+    .compliance-save-bar p {
+        margin: 0;
+        color: #64748b;
+    }
+
+    .compliance-save-bar button {
+        border: none;
+        border-radius: 12px;
+        padding: 12px 18px;
+        background: #111827;
+        color: #ffffff;
+        font-weight: 900;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .compliance-save-bar button:hover {
+        opacity: 0.92;
+    }
+
+    @media (max-width: 1200px) {
+        .settings-grid,
+        .compliance-preview-grid {
+            grid-template-columns: repeat(2, minmax(180px, 1fr));
+        }
+    }
+
+    @media (max-width: 720px) {
+        .settings-grid,
+        .compliance-preview-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .compliance-section-header {
+            flex-direction: column;
+        }
+
+        .compliance-save-bar {
+            flex-direction: column;
+            align-items: stretch;
+            position: static;
+        }
+
+        .compliance-save-bar button {
+            width: 100%;
+        }
+    }
+</style>
 
 <div class="card compliance-hero">
     <span class="section-tag">PAYROLL COMPLIANCE</span>
 
-    <h1>Compliance Settings</h1>
+    <h1>Compliance & Payroll Policy</h1>
 
     <p>
-        Update statutory payroll rules used during salary calculation.
-        Please verify rates with HR, Accounts or CA before processing payroll.
+        Configure PF, ESIC, gratuity, TDS, salary days policy, paid days rules and annual festival bonus settings.
+        These rules are company-wise and will affect future payroll calculations.
     </p>
 </div>
 
-<form method="POST" class="compliance-premium-form">
+<form method="POST" action="{{ url_for('compliance_settings') }}" class="compliance-premium-form">
 
+    <!-- Payroll Policy Engine -->
     <div class="card compliance-section">
         <div class="compliance-section-header">
-            <div class="feature-icon">🏦</div>
+            <div class="feature-icon">01</div>
+            <div>
+                <h2>Payroll Policy Engine</h2>
+                <p>Control salary days, weekly off, paid leave, holiday and LOP rules company-wise.</p>
+            </div>
+        </div>
+
+        <div class="settings-grid">
+            <div class="form-group">
+                <label for="salary_days_policy">Salary Days Policy</label>
+                <select id="salary_days_policy" name="salary_days_policy">
+                    <option value="attendance" {% if settings and settings['salary_days_policy'] == 'attendance' %}selected{% endif %}>Attendance Working Days</option>
+                    <option value="fixed_26" {% if settings and settings['salary_days_policy'] == 'fixed_26' %}selected{% endif %}>Fixed 26 Days</option>
+                    <option value="fixed_30" {% if settings and settings['salary_days_policy'] == 'fixed_30' %}selected{% endif %}>Fixed 30 Days</option>
+                    <option value="calendar" {% if settings and settings['salary_days_policy'] == 'calendar' %}selected{% endif %}>Calendar Days</option>
+                    <option value="custom" {% if settings and settings['salary_days_policy'] == 'custom' %}selected{% endif %}>Custom Days</option>
+                </select>
+                <small class="field-help">Select how salary payable days should be calculated.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="custom_salary_days">Custom Salary Days</label>
+                <input
+                    id="custom_salary_days"
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    max="31"
+                    name="custom_salary_days"
+                    value="{{ settings['custom_salary_days'] if settings and settings['custom_salary_days'] is not none else 30 }}"
+                >
+                <small class="field-help">Used only when salary days policy is Custom Days.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="count_weekly_off_paid">Count Weekly Off as Paid?</label>
+                <select id="count_weekly_off_paid" name="count_weekly_off_paid">
+                    <option value="1" {% if settings and settings['count_weekly_off_paid']|int == 1 %}selected{% endif %}>Yes</option>
+                    <option value="0" {% if settings and settings['count_weekly_off_paid']|int == 0 %}selected{% endif %}>No</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="count_paid_leave_paid">Count Paid Leave as Paid?</label>
+                <select id="count_paid_leave_paid" name="count_paid_leave_paid">
+                    <option value="1" {% if settings and settings['count_paid_leave_paid']|int == 1 %}selected{% endif %}>Yes</option>
+                    <option value="0" {% if settings and settings['count_paid_leave_paid']|int == 0 %}selected{% endif %}>No</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="count_holiday_paid">Count Holiday as Paid?</label>
+                <select id="count_holiday_paid" name="count_holiday_paid">
+                    <option value="1" {% if settings and settings['count_holiday_paid']|int == 1 %}selected{% endif %}>Yes</option>
+                    <option value="0" {% if settings and settings['count_holiday_paid']|int == 0 %}selected{% endif %}>No</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="deduct_lop">Deduct LOP?</label>
+                <select id="deduct_lop" name="deduct_lop">
+                    <option value="1" {% if settings and settings['deduct_lop']|int == 1 %}selected{% endif %}>Yes</option>
+                    <option value="0" {% if settings and settings['deduct_lop']|int == 0 %}selected{% endif %}>No</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="payroll-note-box">
+            <b>Paid Days Formula Preview</b>
+            <span id="paid_days_formula_preview">
+                Paid Days = Present Days
+            </span>
+        </div>
+    </div>
+
+    <!-- Festival Bonus Policy -->
+    <div class="card compliance-section">
+        <div class="compliance-section-header">
+            <div class="feature-icon">02</div>
+            <div>
+                <h2>Festival Bonus Policy</h2>
+                <p>Enable annual bonus payout in selected festival month, commonly Diwali month.</p>
+            </div>
+        </div>
+
+        <div class="settings-grid">
+            <div class="form-group">
+                <label for="festival_bonus_enabled">Festival Bonus Enabled?</label>
+                <select id="festival_bonus_enabled" name="festival_bonus_enabled">
+                    <option value="0" {% if settings and settings['festival_bonus_enabled']|int == 0 %}selected{% endif %}>No</option>
+                    <option value="1" {% if settings and settings['festival_bonus_enabled']|int == 1 %}selected{% endif %}>Yes</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="festival_bonus_month">Festival Bonus Payout Month</label>
+                <select id="festival_bonus_month" name="festival_bonus_month">
+                    <option value="1" {% if settings and settings['festival_bonus_month']|int == 1 %}selected{% endif %}>January</option>
+                    <option value="2" {% if settings and settings['festival_bonus_month']|int == 2 %}selected{% endif %}>February</option>
+                    <option value="3" {% if settings and settings['festival_bonus_month']|int == 3 %}selected{% endif %}>March</option>
+                    <option value="4" {% if settings and settings['festival_bonus_month']|int == 4 %}selected{% endif %}>April</option>
+                    <option value="5" {% if settings and settings['festival_bonus_month']|int == 5 %}selected{% endif %}>May</option>
+                    <option value="6" {% if settings and settings['festival_bonus_month']|int == 6 %}selected{% endif %}>June</option>
+                    <option value="7" {% if settings and settings['festival_bonus_month']|int == 7 %}selected{% endif %}>July</option>
+                    <option value="8" {% if settings and settings['festival_bonus_month']|int == 8 %}selected{% endif %}>August</option>
+                    <option value="9" {% if settings and settings['festival_bonus_month']|int == 9 %}selected{% endif %}>September</option>
+                    <option value="10" {% if settings and settings['festival_bonus_month']|int == 10 %}selected{% endif %}>October</option>
+                    <option value="11" {% if settings and settings['festival_bonus_month']|int == 11 %}selected{% endif %}>November</option>
+                    <option value="12" {% if settings and settings['festival_bonus_month']|int == 12 %}selected{% endif %}>December</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="bonus_rate">Bonus Accrual Rate (%)</label>
+                <input
+                    id="bonus_rate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    name="bonus_rate"
+                    value="{{ settings['bonus_rate'] if settings and settings['bonus_rate'] is not none else 8.33 }}"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="bonus_min_service_days">Minimum Service Days for Bonus</label>
+                <input
+                    id="bonus_min_service_days"
+                    type="number"
+                    step="1"
+                    min="0"
+                    name="bonus_min_service_days"
+                    value="{{ settings['bonus_min_service_days'] if settings and settings['bonus_min_service_days'] is not none else 30 }}"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="bonus_prorata_enabled">Bonus Prorata Enabled?</label>
+                <select id="bonus_prorata_enabled" name="bonus_prorata_enabled">
+                    <option value="1" {% if settings and settings['bonus_prorata_enabled']|int == 1 %}selected{% endif %}>Yes</option>
+                    <option value="0" {% if settings and settings['bonus_prorata_enabled']|int == 0 %}selected{% endif %}>No</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="payroll-note-box">
+            <b>Festival Bonus Logic</b>
+            <span id="bonus_policy_preview">
+                Bonus accrues monthly based on the selected bonus rate.
+            </span>
+        </div>
+    </div>
+
+    <!-- PF Settings -->
+    <div class="card compliance-section">
+        <div class="compliance-section-header">
+            <div class="feature-icon">03</div>
             <div>
                 <h2>PF Settings</h2>
                 <p>Provident Fund employee and employer contribution rules.</p>
@@ -31,30 +397,83 @@
 
         <div class="settings-grid">
             <div class="form-group">
-                <label>PF Employee Rate (%)</label>
-                <input type="number" step="0.01" name="pf_employee_rate" value="{{ settings['pf_employee_rate']|round|int }}">
+                <label for="pf_employee_rate">PF Employee Rate (%)</label>
+                <input
+                    id="pf_employee_rate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    name="pf_employee_rate"
+                    value="{{ settings['pf_employee_rate'] if settings and settings['pf_employee_rate'] is not none else 12 }}"
+                >
             </div>
 
             <div class="form-group">
-                <label>PF Employer Rate (%)</label>
-                <input type="number" step="0.01" name="pf_employer_rate" value="{{ settings['pf_employer_rate']|round|int }}">
+                <label for="pf_employer_rate">PF Employer Rate (%)</label>
+                <input
+                    id="pf_employer_rate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    name="pf_employer_rate"
+                    value="{{ settings['pf_employer_rate'] if settings and settings['pf_employer_rate'] is not none else 12 }}"
+                >
             </div>
 
             <div class="form-group">
-                <label>PF Wage Ceiling</label>
-                <input type="number" step="1" name="pf_wage_ceiling" value="{{ settings['pf_wage_ceiling']|round|int }}">
+                <label for="pf_wage_ceiling">PF Wage Ceiling</label>
+                <input
+                    id="pf_wage_ceiling"
+                    type="number"
+                    step="1"
+                    min="0"
+                    name="pf_wage_ceiling"
+                    value="{{ settings['pf_wage_ceiling']|round|int if settings and settings['pf_wage_ceiling'] is not none else 15000 }}"
+                >
             </div>
 
             <div class="form-group">
-                <label>PF Max Deduction</label>
-                <input type="number" step="1" name="pf_max_deduction" value="{{ settings['pf_max_deduction']|round|int }}">
+                <label for="pf_max_deduction">PF Max Deduction</label>
+                <input
+                    id="pf_max_deduction"
+                    type="number"
+                    step="1"
+                    min="0"
+                    name="pf_max_deduction"
+                    value="{{ settings['pf_max_deduction']|round|int if settings and settings['pf_max_deduction'] is not none else 1800 }}"
+                >
+            </div>
+        </div>
+
+        <div class="compliance-preview-grid">
+            <div class="compliance-preview-item">
+                <span>PF Wage Ceiling</span>
+                <b id="preview_pf_ceiling">₹0</b>
+            </div>
+
+            <div class="compliance-preview-item">
+                <span>Employee PF Rate</span>
+                <b id="preview_pf_employee">0%</b>
+            </div>
+
+            <div class="compliance-preview-item">
+                <span>Employer PF Rate</span>
+                <b id="preview_pf_employer">0%</b>
+            </div>
+
+            <div class="compliance-preview-item">
+                <span>Max PF Deduction</span>
+                <b id="preview_pf_max">₹0</b>
             </div>
         </div>
     </div>
 
+    <!-- ESIC Settings -->
     <div class="card compliance-section">
         <div class="compliance-section-header">
-            <div class="feature-icon">🛡️</div>
+            <div class="feature-icon">04</div>
             <div>
                 <h2>ESIC Settings</h2>
                 <p>ESIC wage limit and contribution percentage setup.</p>
@@ -63,63 +482,289 @@
 
         <div class="settings-grid">
             <div class="form-group">
-                <label>ESIC Employee Rate (%)</label>
-                <input type="number" step="0.01" name="esic_employee_rate" value="{{ settings['esic_employee_rate'] }}">
+                <label for="esic_employee_rate">ESIC Employee Rate (%)</label>
+                <input
+                    id="esic_employee_rate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    name="esic_employee_rate"
+                    value="{{ settings['esic_employee_rate'] if settings and settings['esic_employee_rate'] is not none else 0.75 }}"
+                >
             </div>
 
             <div class="form-group">
-                <label>ESIC Employer Rate (%)</label>
-                <input type="number" step="0.01" name="esic_employer_rate" value="{{ settings['esic_employer_rate'] }}">
+                <label for="esic_employer_rate">ESIC Employer Rate (%)</label>
+                <input
+                    id="esic_employer_rate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    name="esic_employer_rate"
+                    value="{{ settings['esic_employer_rate'] if settings and settings['esic_employer_rate'] is not none else 3.25 }}"
+                >
             </div>
 
             <div class="form-group">
-                <label>ESIC Wage Limit</label>
-                <input type="number" step="1" name="esic_wage_limit" value="{{ settings['esic_wage_limit']|round|int }}">
+                <label for="esic_wage_limit">ESIC Wage Limit</label>
+                <input
+                    id="esic_wage_limit"
+                    type="number"
+                    step="1"
+                    min="0"
+                    name="esic_wage_limit"
+                    value="{{ settings['esic_wage_limit']|round|int if settings and settings['esic_wage_limit'] is not none else 21000 }}"
+                >
+            </div>
+        </div>
+
+        <div class="compliance-preview-grid">
+            <div class="compliance-preview-item">
+                <span>ESIC Wage Limit</span>
+                <b id="preview_esic_limit">₹0</b>
+            </div>
+
+            <div class="compliance-preview-item">
+                <span>Employee ESIC Rate</span>
+                <b id="preview_esic_employee">0%</b>
+            </div>
+
+            <div class="compliance-preview-item">
+                <span>Employer ESIC Rate</span>
+                <b id="preview_esic_employer">0%</b>
+            </div>
+
+            <div class="compliance-preview-item">
+                <span>ESIC Status</span>
+                <b>Applied up to wage limit</b>
             </div>
         </div>
     </div>
 
+    <!-- Other Compliance Settings -->
     <div class="card compliance-section">
         <div class="compliance-section-header">
-            <div class="feature-icon">⚙️</div>
+            <div class="feature-icon">05</div>
             <div>
                 <h2>Other Compliance Settings</h2>
-                <p>Gratuity, bonus and TDS controls.</p>
+                <p>Gratuity and TDS controls.</p>
             </div>
         </div>
 
         <div class="settings-grid">
             <div class="form-group">
-                <label>Gratuity Rate (%)</label>
-                <input type="number" step="0.01" name="gratuity_rate" value="{{ settings['gratuity_rate'] }}">
+                <label for="gratuity_rate">Gratuity Rate (%)</label>
+                <input
+                    id="gratuity_rate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    name="gratuity_rate"
+                    value="{{ settings['gratuity_rate'] if settings and settings['gratuity_rate'] is not none else 4.81 }}"
+                >
             </div>
 
             <div class="form-group">
-                <label>Bonus Rate (%)</label>
-                <input type="number" step="0.01" name="bonus_rate" value="{{ settings['bonus_rate'] }}">
-            </div>
-
-            <div class="form-group">
-                <label>TDS Enabled?</label>
-                <select name="tds_enabled">
-                    <option value="0" {% if settings['tds_enabled']|int == 0 %}selected{% endif %}>No</option>
-                    <option value="1" {% if settings['tds_enabled']|int == 1 %}selected{% endif %}>Yes</option>
+                <label for="tds_enabled">TDS Enabled?</label>
+                <select id="tds_enabled" name="tds_enabled">
+                    <option value="0" {% if settings and settings['tds_enabled']|int == 0 %}selected{% endif %}>No</option>
+                    <option value="1" {% if settings and settings['tds_enabled']|int == 1 %}selected{% endif %}>Yes</option>
                 </select>
             </div>
         </div>
+
+        <div class="payroll-note-box">
+            <b>Note</b>
+            <span>
+                These settings are saved company-wise. Changes will apply to future payroll runs.
+                Already generated payroll records will not change automatically.
+            </span>
+        </div>
     </div>
 
+    <!-- Save Bar -->
     <div class="card compliance-save-bar">
         <div>
-            <h3>Ready to save changes?</h3>
+            <h3>Save compliance and payroll policy?</h3>
             <p>These settings will affect future payroll calculations.</p>
         </div>
 
-        <button type="submit">
-            Save Compliance Settings
+        <button type="submit" onclick="return confirm('Save updated compliance and payroll policy settings?');">
+            Save Settings
         </button>
     </div>
 
 </form>
+
+<script>
+    function getNumberValue(id, fallback) {
+        const el = document.getElementById(id);
+
+        if (!el || el.value.trim() === "") {
+            return fallback || 0;
+        }
+
+        const value = parseFloat(el.value);
+
+        if (Number.isNaN(value)) {
+            return fallback || 0;
+        }
+
+        return value;
+    }
+
+    function getSelectValue(id, fallback) {
+        const el = document.getElementById(id);
+
+        if (!el) {
+            return fallback || "";
+        }
+
+        return el.value || fallback || "";
+    }
+
+    function formatMoney(value) {
+        return "₹" + Math.round(value || 0).toLocaleString("en-IN");
+    }
+
+    function formatPercent(value) {
+        const number = parseFloat(value || 0);
+
+        if (Number.isInteger(number)) {
+            return number.toString() + "%";
+        }
+
+        return number.toFixed(2).replace(/\.?0+$/, "") + "%";
+    }
+
+    function setText(id, value) {
+        const el = document.getElementById(id);
+
+        if (el) {
+            el.innerText = value;
+        }
+    }
+
+    function updateCompliancePreview() {
+        const salaryPolicy = getSelectValue("salary_days_policy", "attendance");
+
+        const customSalaryDaysInput = document.getElementById("custom_salary_days");
+
+        if (customSalaryDaysInput) {
+            customSalaryDaysInput.disabled = salaryPolicy !== "custom";
+            customSalaryDaysInput.style.opacity = salaryPolicy === "custom" ? "1" : "0.65";
+        }
+
+        const countWeeklyOff = getSelectValue("count_weekly_off_paid", "0") === "1";
+        const countPaidLeave = getSelectValue("count_paid_leave_paid", "0") === "1";
+        const countHoliday = getSelectValue("count_holiday_paid", "0") === "1";
+        const deductLop = getSelectValue("deduct_lop", "0") === "1";
+
+        let formula = "Paid Days = Present Days";
+
+        if (countWeeklyOff) {
+            formula += " + Weekly Off";
+        }
+
+        if (countPaidLeave) {
+            formula += " + Paid Leave";
+        }
+
+        if (countHoliday) {
+            formula += " + Holiday";
+        }
+
+        if (deductLop) {
+            formula += " - LOP Days";
+        }
+
+        if (salaryPolicy === "fixed_26") {
+            formula += " | Salary Base: Fixed 26 Days";
+        } else if (salaryPolicy === "fixed_30") {
+            formula += " | Salary Base: Fixed 30 Days";
+        } else if (salaryPolicy === "calendar") {
+            formula += " | Salary Base: Calendar Days";
+        } else if (salaryPolicy === "custom") {
+            const customDays = getNumberValue("custom_salary_days", 30);
+            formula += " | Salary Base: Custom " + customDays + " Days";
+        } else {
+            formula += " | Salary Base: Attendance Working Days";
+        }
+
+        setText("paid_days_formula_preview", formula);
+
+        const festivalEnabled = getSelectValue("festival_bonus_enabled", "0") === "1";
+        const festivalMonthSelect = document.getElementById("festival_bonus_month");
+        const festivalMonthText = festivalMonthSelect
+            ? festivalMonthSelect.options[festivalMonthSelect.selectedIndex].text
+            : "October";
+
+        const bonusRate = getNumberValue("bonus_rate", 8.33);
+        const minServiceDays = getNumberValue("bonus_min_service_days", 30);
+        const prorata = getSelectValue("bonus_prorata_enabled", "1") === "1";
+
+        let bonusText = "Festival bonus is disabled.";
+
+        if (festivalEnabled) {
+            bonusText =
+                "Festival bonus enabled. Bonus rate " +
+                formatPercent(bonusRate) +
+                ", payout month " +
+                festivalMonthText +
+                ", minimum service " +
+                minServiceDays +
+                " days, prorata " +
+                (prorata ? "enabled." : "disabled.");
+        }
+
+        setText("bonus_policy_preview", bonusText);
+
+        setText("preview_pf_ceiling", formatMoney(getNumberValue("pf_wage_ceiling", 15000)));
+        setText("preview_pf_employee", formatPercent(getNumberValue("pf_employee_rate", 12)));
+        setText("preview_pf_employer", formatPercent(getNumberValue("pf_employer_rate", 12)));
+        setText("preview_pf_max", formatMoney(getNumberValue("pf_max_deduction", 1800)));
+
+        setText("preview_esic_limit", formatMoney(getNumberValue("esic_wage_limit", 21000)));
+        setText("preview_esic_employee", formatPercent(getNumberValue("esic_employee_rate", 0.75)));
+        setText("preview_esic_employer", formatPercent(getNumberValue("esic_employer_rate", 3.25)));
+    }
+
+    const complianceInputIds = [
+        "salary_days_policy",
+        "custom_salary_days",
+        "count_weekly_off_paid",
+        "count_paid_leave_paid",
+        "count_holiday_paid",
+        "deduct_lop",
+        "festival_bonus_enabled",
+        "festival_bonus_month",
+        "bonus_rate",
+        "bonus_min_service_days",
+        "bonus_prorata_enabled",
+        "pf_employee_rate",
+        "pf_employer_rate",
+        "pf_wage_ceiling",
+        "pf_max_deduction",
+        "esic_employee_rate",
+        "esic_employer_rate",
+        "esic_wage_limit",
+        "gratuity_rate",
+        "tds_enabled"
+    ];
+
+    complianceInputIds.forEach(function(id) {
+        const el = document.getElementById(id);
+
+        if (el) {
+            el.addEventListener("input", updateCompliancePreview);
+            el.addEventListener("change", updateCompliancePreview);
+        }
+    });
+
+    updateCompliancePreview();
+</script>
 
 {% endblock %}

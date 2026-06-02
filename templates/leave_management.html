@@ -16,13 +16,14 @@
 
         <p class="profile-text">
             Add employee leave details for payroll and attendance tracking.
+            Duplicate or overlapping Pending/Approved leave requests for the same employee will be blocked.
         </p>
 
         <form method="POST" class="profile-form">
 
             <div class="form-group full-row">
-                <label>Employee</label>
-                <select name="emp_code" required>
+                <label for="emp_code">Employee</label>
+                <select name="emp_code" id="emp_code" required>
                     <option value="">Select Employee</option>
                     {% for emp in employees %}
                     <option value="{{ emp['emp_code'] }}">
@@ -33,33 +34,40 @@
             </div>
 
             <div class="form-group">
-                <label>Leave Type</label>
-                <select name="leave_type" required>
+                <label for="leave_type">Leave Type</label>
+                <select name="leave_type" id="leave_type" required>
                     <option value="Casual Leave">Casual Leave</option>
                     <option value="Sick Leave">Sick Leave</option>
                     <option value="Paid Leave">Paid Leave</option>
-                    <option value="Unpaid Leave">Unpaid Leave</option>
+                    <option value="Leave Without Pay">Leave Without Pay</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label>Total Days</label>
-                <input type="number" step="0.5" name="total_days" placeholder="Example: 1, 1.5, 2" required>
+                <label for="start_date">Start Date</label>
+                <input type="date" name="start_date" id="start_date" required>
             </div>
 
             <div class="form-group">
-                <label>Start Date</label>
-                <input type="date" name="start_date" required>
+                <label for="end_date">End Date</label>
+                <input type="date" name="end_date" id="end_date" required>
             </div>
 
             <div class="form-group">
-                <label>End Date</label>
-                <input type="date" name="end_date" required>
+                <label for="total_days">Total Days</label>
+                <input type="number" step="0.5" min="0.5" name="total_days" id="total_days" placeholder="Auto calculated from dates" required>
             </div>
 
             <div class="form-group full-row">
-                <label>Reason</label>
-                <textarea name="reason" rows="3" placeholder="Reason for leave"></textarea>
+                <label for="reason">Reason</label>
+                <textarea name="reason" id="reason" rows="3" placeholder="Reason for leave"></textarea>
+            </div>
+
+            <div class="form-group full-row">
+                <div class="info-note">
+                    <b>Note:</b> Casual, Sick and Paid Leave reduce leave balance after approval.
+                    Leave Without Pay does not reduce leave balance.
+                </div>
             </div>
 
             <div class="form-group full-row">
@@ -81,6 +89,7 @@
                     <input
                         type="number"
                         step="0.5"
+                        min="0"
                         name="casual_leave_limit"
                         value="{{ leave_policy['casual_leave_limit'] if leave_policy else 6 }}"
                         required
@@ -92,6 +101,7 @@
                     <input
                         type="number"
                         step="0.5"
+                        min="0"
                         name="sick_leave_limit"
                         value="{{ leave_policy['sick_leave_limit'] if leave_policy else 6 }}"
                         required
@@ -103,6 +113,7 @@
                     <input
                         type="number"
                         step="0.5"
+                        min="0"
                         name="paid_leave_limit"
                         value="{{ leave_policy['paid_leave_limit'] if leave_policy else 12 }}"
                         required
@@ -115,7 +126,8 @@
             </form>
 
             <p class="hint">
-                Policy changes apply to new employee balances. Existing balances can be adjusted separately.
+                Policy changes create balances only for employees without balance records.
+                Existing balances are not overwritten.
             </p>
         </div>
 
@@ -142,7 +154,23 @@
                 <div class="feature-icon">💰</div>
                 <div>
                     <b>Payroll Link</b>
-                    <span>Approved unpaid leave can later affect salary calculation.</span>
+                    <span>Approved LWP can be considered in attendance/payroll processing.</span>
+                </div>
+            </div>
+
+            <div class="feature-item">
+                <div class="feature-icon">🛡️</div>
+                <div>
+                    <b>Duplicate Protection</b>
+                    <span>Same employee cannot create overlapping Pending/Approved leave requests.</span>
+                </div>
+            </div>
+
+            <div class="feature-item">
+                <div class="feature-icon">↩️</div>
+                <div>
+                    <b>Cancel / Reverse</b>
+                    <span>Approved paid leave cancellation restores leave balance automatically.</span>
                 </div>
             </div>
         </div>
@@ -175,6 +203,7 @@
                     <th>Sick Leave</th>
                     <th>Paid Leave</th>
                     <th>Used Leave</th>
+                    <th>Status</th>
                 </tr>
             </thead>
 
@@ -203,6 +232,14 @@
                     <td><span class="badge pro">{{ row['sick_leave'] }}</span></td>
                     <td><span class="badge pro">{{ row['paid_leave'] }}</span></td>
                     <td><b>{{ row['used_leave'] }}</b></td>
+
+                    <td>
+                        {% if row['casual_leave']|float <= 0 and row['sick_leave']|float <= 0 and row['paid_leave']|float <= 0 %}
+                            <span class="badge free">Low Balance</span>
+                        {% else %}
+                            <span class="badge pro">Available</span>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -296,7 +333,7 @@
                                 <button
                                     type="submit"
                                     class="leave-approve-btn"
-                                    onclick="return confirm('Approve this leave request? Balance will be updated automatically.');"
+                                    onclick="return confirm('Approve this leave request? Balance will be updated automatically for paid leave types.');"
                                 >
                                     Approve
                                 </button>
@@ -316,7 +353,52 @@
                                 </button>
                             </form>
 
+                            <form
+                                method="POST"
+                                action="{{ url_for('cancel_leave', leave_id=row['id']) }}"
+                                style="display:inline;"
+                            >
+                                <button
+                                    type="submit"
+                                    class="danger-btn"
+                                    onclick="return confirm('Delete this pending leave request? Leave balance will not change.');"
+                                >
+                                    Delete
+                                </button>
+                            </form>
+
                         </div>
+
+                        {% elif row['status'] == 'Approved' %}
+                            <form
+                                method="POST"
+                                action="{{ url_for('cancel_leave', leave_id=row['id']) }}"
+                                style="display:inline;"
+                            >
+                                <button
+                                    type="submit"
+                                    class="danger-btn"
+                                    onclick="return confirm('Cancel this approved leave? Paid leave balance will be reversed automatically.');"
+                                >
+                                    Cancel
+                                </button>
+                            </form>
+
+                        {% elif row['status'] == 'Rejected' %}
+                            <form
+                                method="POST"
+                                action="{{ url_for('cancel_leave', leave_id=row['id']) }}"
+                                style="display:inline;"
+                            >
+                                <button
+                                    type="submit"
+                                    class="danger-btn"
+                                    onclick="return confirm('Delete this rejected leave request? Leave balance will not change.');"
+                                >
+                                    Delete
+                                </button>
+                            </form>
+
                         {% else %}
                             -
                         {% endif %}
@@ -334,5 +416,49 @@
     <p>Add employee leave records to start tracking leave management.</p>
 </div>
 {% endif %}
+
+<script>
+function calculateLeaveDays() {
+    const startDateInput = document.getElementById("start_date");
+    const endDateInput = document.getElementById("end_date");
+    const totalDaysInput = document.getElementById("total_days");
+
+    if (!startDateInput || !endDateInput || !totalDaysInput) {
+        return;
+    }
+
+    if (!startDateInput.value || !endDateInput.value) {
+        return;
+    }
+
+    const start = new Date(startDateInput.value);
+    const end = new Date(endDateInput.value);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+        return;
+    }
+
+    if (end < start) {
+        totalDaysInput.value = "";
+        return;
+    }
+
+    const diffMs = end - start;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+
+    totalDaysInput.value = diffDays;
+}
+
+const startDateInput = document.getElementById("start_date");
+const endDateInput = document.getElementById("end_date");
+
+if (startDateInput) {
+    startDateInput.addEventListener("change", calculateLeaveDays);
+}
+
+if (endDateInput) {
+    endDateInput.addEventListener("change", calculateLeaveDays);
+}
+</script>
 
 {% endblock %}

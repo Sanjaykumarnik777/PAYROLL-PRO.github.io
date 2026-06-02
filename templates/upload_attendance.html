@@ -3,21 +3,21 @@
 {% block title %}Upload Attendance | SmartHire Payroll{% endblock %}
 
 {% block page_heading %}Upload Attendance{% endblock %}
-{% block page_subheading %}Upload monthly biometric attendance for payroll processing.{% endblock %}
+{% block page_subheading %}Upload monthly attendance with weekly off, paid leave, holiday, LOP, overtime and deductions.{% endblock %}
 
 {% block content %}
 
 <div class="upload-layout">
 
     <div class="card upload-card">
-        <span class="section-tag">BIOMETRIC ATTENDANCE</span>
+        <span class="section-tag">PAYROLL ATTENDANCE</span>
 
         <h1>Upload Monthly Attendance</h1>
 
         <p class="upload-text">
             Upload employee-wise monthly attendance data for salary processing.
-            The system will validate employee codes, month format, working days,
-            present days, overtime, bonus and deductions before payroll run.
+            The system validates employee codes, month format, working days,
+            present days, weekly off, paid leave, holidays, LOP, overtime, bonus and deductions before payroll run.
         </p>
 
         {% if session.get("error_report") %}
@@ -26,21 +26,26 @@
             <span>
                 Some rows have errors. Download the error report, fix your file and upload again.
             </span>
+
+            <a href="{{ url_for('download_error_report') }}" class="danger-btn" style="margin-top:12px;display:inline-flex;">
+                Download Error Report
+            </a>
         </div>
         {% endif %}
 
         <form method="POST" enctype="multipart/form-data" class="upload-form">
-            <label>Select Attendance File</label>
+            <label for="file">Select Attendance File</label>
 
             <input
                 type="file"
                 name="file"
+                id="file"
                 accept=".csv,.xlsx"
                 required
             >
 
             <button type="submit">
-                Upload Attendance
+                Validate & Upload Attendance
             </button>
         </form>
 
@@ -49,11 +54,14 @@
                 Download Sample File
             </a>
 
-            {% if session.get("error_report") %}
-            <a href="{{ url_for('download_error_report') }}" class="danger-btn">
-                Download Error Report
+            <a href="{{ url_for('attendance_list') }}" class="secondary-btn">
+                View Attendance Register
             </a>
-            {% endif %}
+        </div>
+
+        <div class="info-note" style="margin-top:18px;">
+            <b>Payroll impact:</b>
+            Paid days, LOP, overtime, bonus and manual deductions directly affect payroll calculation.
         </div>
     </div>
 
@@ -61,21 +69,35 @@
         <h2>Required File Format</h2>
 
         <p>
-            Your Excel/CSV file must contain the following columns. Column names should be exactly the same.
+            Your Excel/CSV file must contain the minimum required columns. Column names should be exactly the same.
         </p>
+
+        <h3 style="margin-top:18px;">Required Columns</h3>
 
         <div class="column-grid">
             <span>emp_code</span>
             <span>month</span>
             <span>working_days</span>
             <span>present_days</span>
+            <span>weekly_off</span>
+            <span>paid_leave</span>
+            <span>holiday</span>
+            <span>lop_days</span>
             <span>overtime_hours</span>
+        </div>
+
+        <h3 style="margin-top:22px;">Optional Columns</h3>
+
+        <div class="column-grid">
+            <span>paid_days</span>
             <span>bonus</span>
             <span>manual_deduction</span>
         </div>
 
         <div class="info-note">
             Month format must be <b>YYYY-MM</b>, for example <b>2026-12</b>.
+            If <b>paid_days</b> is blank or 0, system calculates it automatically:
+            <b>present_days + weekly_off + paid_leave + holiday - lop_days</b>.
         </div>
     </div>
 
@@ -98,27 +120,37 @@
 
         <div class="upload-rule-card">
             <b>Month Format</b>
-            <span>Month must be in YYYY-MM format.</span>
+            <span>Month must be in YYYY-MM format, for example 2026-12.</span>
         </div>
 
         <div class="upload-rule-card">
-            <b>Present Days Check</b>
-            <span>Present days cannot be greater than working days.</span>
+            <b>Paid Days Formula</b>
+            <span>Paid days should match present + weekly off + paid leave + holiday - LOP.</span>
         </div>
 
         <div class="upload-rule-card">
             <b>Duplicate Check</b>
-            <span>Same employee and same month cannot appear twice.</span>
+            <span>Same employee and same month cannot appear twice in one file.</span>
         </div>
 
         <div class="upload-rule-card">
             <b>Numeric Validation</b>
-            <span>Working days, overtime, bonus and deductions must be valid numbers.</span>
+            <span>Working days, leave, overtime, bonus and deductions must be valid positive numbers.</span>
         </div>
 
         <div class="upload-rule-card">
             <b>Replace Existing Month</b>
-            <span>Uploading the same month again will replace old attendance for that month.</span>
+            <span>Uploading the same month again replaces old attendance for that month.</span>
+        </div>
+
+        <div class="upload-rule-card">
+            <b>Maximum Days Check</b>
+            <span>Working days, present days, leave, holiday and LOP cannot be greater than 31.</span>
+        </div>
+
+        <div class="upload-rule-card">
+            <b>Payroll Ready</b>
+            <span>After upload, run payroll for the selected month from Run Payroll page.</span>
         </div>
     </div>
 </div>
@@ -130,6 +162,10 @@
             <h2>Example Attendance Format</h2>
             <p>Use this format in your Excel or CSV file.</p>
         </div>
+
+        <a href="{{ url_for('download_attendance_sample') }}" class="secondary-btn">
+            Download Sample
+        </a>
     </div>
 
     <p class="table-scroll-hint">Swipe left to view full sample table →</p>
@@ -142,6 +178,11 @@
                     <th>month</th>
                     <th>working_days</th>
                     <th>present_days</th>
+                    <th>weekly_off</th>
+                    <th>paid_leave</th>
+                    <th>holiday</th>
+                    <th>lop_days</th>
+                    <th>paid_days</th>
                     <th>overtime_hours</th>
                     <th>bonus</th>
                     <th>manual_deduction</th>
@@ -154,6 +195,11 @@
                     <td>2026-12</td>
                     <td>30</td>
                     <td>26</td>
+                    <td>4</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>30</td>
                     <td>2</td>
                     <td>0</td>
                     <td>0</td>
@@ -164,6 +210,11 @@
                     <td>2026-12</td>
                     <td>30</td>
                     <td>24</td>
+                    <td>4</td>
+                    <td>1</td>
+                    <td>0</td>
+                    <td>1</td>
+                    <td>28</td>
                     <td>2</td>
                     <td>0</td>
                     <td>0</td>

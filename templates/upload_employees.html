@@ -15,7 +15,7 @@
         <h1>Upload Employee Master</h1>
 
         <p class="upload-text">
-            Upload employee master data including salary, department, tax regime,
+            Upload employee master data including salary, department, gender, tax regime,
             statutory details, bank details and payroll-ready employee information.
             The system validates your file before saving records.
         </p>
@@ -26,21 +26,26 @@
             <span>
                 Some rows have errors. Download the error report, correct your file and upload again.
             </span>
+
+            <a href="{{ url_for('download_error_report') }}" class="danger-btn" style="margin-top:12px;display:inline-flex;">
+                Download Error Report
+            </a>
         </div>
         {% endif %}
 
         <form method="POST" enctype="multipart/form-data" class="upload-form">
-            <label>Select Employee File</label>
+            <label for="file">Select Employee File</label>
 
             <input
                 type="file"
                 name="file"
+                id="file"
                 accept=".csv,.xlsx"
                 required
             >
 
             <button type="submit">
-                Upload Employees
+                Validate & Upload Employees
             </button>
         </form>
 
@@ -49,11 +54,14 @@
                 Download Sample File
             </a>
 
-            {% if session.get("error_report") %}
-            <a href="{{ url_for('download_error_report') }}" class="danger-btn">
-                Download Error Report
+            <a href="{{ url_for('employees_list') }}" class="secondary-btn">
+                View Employee Master
             </a>
-            {% endif %}
+        </div>
+
+        <div class="info-note" style="margin-top:18px;">
+            <b>Plan note:</b>
+            Free plan allows up to 10 employees. PRO plan allows unlimited employees and payroll reports.
         </div>
     </div>
 
@@ -61,16 +69,23 @@
         <h2>Required File Format</h2>
 
         <p>
-            Your Excel/CSV file must contain these columns. Keep column names exactly the same.
+            Your Excel/CSV file must contain the minimum required columns. Keep column names exactly the same.
         </p>
+
+        <h3 style="margin-top:18px;">Minimum Required Columns</h3>
 
         <div class="column-grid">
             <span>emp_code</span>
             <span>employee_name</span>
             <span>role</span>
+            <span>monthly_salary</span>
+        </div>
+
+        <h3 style="margin-top:22px;">Recommended Optional Columns</h3>
+
+        <div class="column-grid">
             <span>department</span>
             <span>gender</span>
-            <span>monthly_salary</span>
             <span>tax_regime</span>
             <span>other_annual_deductions</span>
             <span>special_allowance</span>
@@ -82,7 +97,8 @@
         </div>
 
         <div class="info-note">
-            Minimum required columns are <b>emp_code</b>, <b>employee_name</b>, <b>role</b> and <b>monthly_salary</b>.
+            Blank department defaults to <b>General</b>. Blank gender defaults to <b>male</b>.
+            Blank tax regime defaults to <b>new</b>.
         </div>
     </div>
 
@@ -115,7 +131,7 @@
 
         <div class="upload-rule-card">
             <b>Gender Format</b>
-            <span>Use male, female or other.</span>
+            <span>Use male, female or other. Blank value defaults to male.</span>
         </div>
 
         <div class="upload-rule-card">
@@ -127,6 +143,16 @@
             <b>Leave Balance Setup</b>
             <span>Leave balances are automatically created for new employees.</span>
         </div>
+
+        <div class="upload-rule-card">
+            <b>Update Existing Employees</b>
+            <span>If emp_code already exists, employee details are updated instead of duplicated.</span>
+        </div>
+
+        <div class="upload-rule-card">
+            <b>Free Plan Limit</b>
+            <span>Only newly added employees count toward the free plan 10 employee limit.</span>
+        </div>
     </div>
 </div>
 
@@ -137,6 +163,10 @@
             <h2>Example Employee Format</h2>
             <p>Use this format in your Excel or CSV file.</p>
         </div>
+
+        <a href="{{ url_for('download_employee_sample') }}" class="secondary-btn">
+            Download Sample
+        </a>
     </div>
 
     <p class="table-scroll-hint">Swipe left to view full sample table →</p>
