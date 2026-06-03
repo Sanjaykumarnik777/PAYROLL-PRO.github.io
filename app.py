@@ -35,7 +35,8 @@ razorpay_client = razorpay.Client(
 PAYMENTS_ENABLED = False
 
 # Local payment test ke liye False rakho
-DEMO_MODE = True
+DEMO_MODE = False
+
 
 FREE_EMPLOYEE_LIMIT = 10
 
@@ -7525,17 +7526,6 @@ def logout():
     flash("Logged out successfully.", "success")
     return redirect(url_for("login"))
    
-
-@app.route("/debug-campaign")
-@login_required
-def debug_campaign():
-    return {
-        "campaign_env": os.environ.get("CAMPAIGN_FREE_MODE", "not_set"),
-        "campaign_mode": is_campaign_free_mode(),
-        "is_admin_user": is_admin_user(),
-        "is_pro_user": is_pro_user(),
-        "active_plan": get_active_plan()
-    }
 
 if __name__ == "__main__":
     app.run(debug=True)
