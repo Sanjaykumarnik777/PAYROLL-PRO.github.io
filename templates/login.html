@@ -4,8 +4,374 @@
 
 {% block content %}
 
+<style>
+    body {
+        background:
+            radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 34%),
+            radial-gradient(circle at bottom right, rgba(249, 115, 22, 0.10), transparent 30%),
+            #f8fafc;
+    }
+
+    .auth-layout {
+        min-height: calc(100vh - 40px);
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 38px;
+        align-items: center;
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 38px 26px;
+    }
+
+    .auth-left {
+        position: relative;
+        padding: 22px 0;
+    }
+
+    .auth-brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 34px;
+    }
+
+    .auth-logo {
+        width: 58px;
+        height: 58px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #1d4ed8, #0f766e);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        font-weight: 900;
+        box-shadow: 0 16px 35px rgba(37, 99, 235, 0.25);
+    }
+
+    .auth-brand h2 {
+        margin: 0;
+        font-size: 28px;
+        color: #0f172a;
+        letter-spacing: -0.6px;
+    }
+
+    .auth-brand p {
+        margin: 3px 0 0;
+        color: #64748b;
+        font-weight: 600;
+    }
+
+    .auth-demo-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #ecfdf5;
+        border: 1px solid #86efac;
+        color: #166534;
+        border-radius: 999px;
+        padding: 11px 17px;
+        font-weight: 900;
+        margin-bottom: 26px;
+        box-shadow: 0 10px 24px rgba(22, 101, 52, 0.08);
+    }
+
+    .auth-left h1 {
+        margin: 0;
+        max-width: 760px;
+        font-size: clamp(42px, 5vw, 72px);
+        line-height: 1.04;
+        letter-spacing: -2.7px;
+        color: #0f172a;
+    }
+
+    .auth-left h1 span {
+        color: #f97316;
+    }
+
+    .auth-description {
+        max-width: 760px;
+        color: #475569;
+        font-size: 20px;
+        line-height: 1.7;
+        margin: 26px 0 26px;
+    }
+
+    .auth-metrics {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(130px, 1fr));
+        gap: 14px;
+        max-width: 760px;
+        margin-bottom: 26px;
+    }
+
+    .auth-metric {
+        background: rgba(255, 255, 255, 0.78);
+        border: 1px solid #e5e7eb;
+        border-radius: 18px;
+        padding: 16px;
+        box-shadow: 0 15px 35px rgba(15, 23, 42, 0.06);
+        backdrop-filter: blur(10px);
+    }
+
+    .auth-metric b {
+        display: block;
+        color: #0f172a;
+        font-size: 22px;
+        margin-bottom: 4px;
+    }
+
+    .auth-metric span {
+        color: #64748b;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .auth-feature-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(220px, 1fr));
+        gap: 14px;
+        max-width: 760px;
+    }
+
+    .auth-feature {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        padding: 15px 16px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid #e5e7eb;
+        border-radius: 18px;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+    }
+
+    .auth-feature span {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+        border-radius: 12px;
+        background: #eff6ff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .auth-feature p {
+        margin: 0;
+        color: #334155;
+        font-weight: 800;
+        line-height: 1.35;
+    }
+
+    .premium-auth-card {
+        width: 100%;
+        max-width: 480px;
+        justify-self: end;
+        padding: 34px;
+        border-radius: 26px;
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(226, 232, 240, 0.95);
+        box-shadow: 0 28px 70px rgba(15, 23, 42, 0.13);
+        backdrop-filter: blur(14px);
+    }
+
+    .section-tag {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 13px;
+        border-radius: 999px;
+        background: #eff6ff;
+        color: #2563eb;
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        margin-bottom: 18px;
+    }
+
+    .premium-auth-card h1 {
+        margin: 0;
+        font-size: 42px;
+        letter-spacing: -1.4px;
+        color: #0f172a;
+    }
+
+    .auth-subtext {
+        color: #64748b;
+        font-size: 17px;
+        margin: 10px 0 20px;
+        line-height: 1.6;
+    }
+
+    .login-demo-note {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        padding: 15px 16px;
+        border-radius: 18px;
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        color: #7c2d12;
+        margin-bottom: 22px;
+    }
+
+    .login-demo-note b {
+        font-size: 16px;
+    }
+
+    .login-demo-note span {
+        line-height: 1.55;
+        font-weight: 650;
+    }
+
+    .auth-form {
+        display: flex;
+        flex-direction: column;
+        gap: 11px;
+    }
+
+    .auth-form label {
+        color: #0f172a;
+        font-weight: 850;
+        font-size: 14px;
+        margin-top: 4px;
+    }
+
+    .auth-form input {
+        min-height: 50px;
+        border-radius: 14px;
+        border: 1px solid #cbd5e1;
+        background: #f8fafc;
+        padding: 12px 14px;
+        font-size: 15px;
+        outline: none;
+        transition: 0.2s ease;
+    }
+
+    .auth-form input:focus {
+        border-color: #2563eb;
+        background: #ffffff;
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+
+    .auth-form button {
+        margin-top: 8px;
+        min-height: 52px;
+        border: none;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: #ffffff;
+        font-weight: 950;
+        font-size: 16px;
+        cursor: pointer;
+        box-shadow: 0 18px 34px rgba(37, 99, 235, 0.25);
+        transition: 0.2s ease;
+    }
+
+    .auth-form button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 22px 44px rgba(37, 99, 235, 0.32);
+    }
+
+    .auth-footer-link {
+        margin-top: 22px;
+        padding-top: 18px;
+        border-top: 1px solid #e5e7eb;
+        text-align: center;
+    }
+
+    .auth-footer-link p {
+        margin: 0;
+        color: #64748b;
+        font-weight: 700;
+    }
+
+    .auth-footer-link a {
+        color: #2563eb;
+        font-weight: 900;
+        text-decoration: none;
+    }
+
+    .auth-contact-strip {
+        margin-top: 18px;
+        display: grid;
+        gap: 8px;
+        font-size: 13px;
+        color: #64748b;
+        text-align: center;
+    }
+
+    .auth-contact-strip a {
+        color: #0f172a;
+        font-weight: 800;
+        text-decoration: none;
+    }
+
+    .auth-bottom-note {
+        max-width: 760px;
+        margin-top: 22px;
+        color: #64748b;
+        font-size: 14px;
+        font-weight: 650;
+    }
+
+    @media (max-width: 980px) {
+        .auth-layout {
+            grid-template-columns: 1fr;
+            gap: 28px;
+            padding: 24px 18px;
+        }
+
+        .premium-auth-card {
+            justify-self: stretch;
+            max-width: 100%;
+        }
+
+        .auth-left h1 {
+            font-size: 46px;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .auth-left h1 {
+            font-size: 38px;
+            letter-spacing: -1.5px;
+        }
+
+        .auth-description {
+            font-size: 16px;
+        }
+
+        .auth-feature-list,
+        .auth-metrics {
+            grid-template-columns: 1fr;
+        }
+
+        .premium-auth-card {
+            padding: 24px;
+            border-radius: 22px;
+        }
+
+        .premium-auth-card h1 {
+            font-size: 34px;
+        }
+
+        .auth-brand h2 {
+            font-size: 23px;
+        }
+    }
+</style>
+
 <div class="auth-layout">
 
+    <div class="mobile-auth-brand">
+    <div class="auth-logo">SH</div>
+    <div>
+        <h2>SmartHire Payroll</h2>
+        <p>Simple. Smart. Payroll SaaS</p>
+    </div>
+</div>
     <div class="auth-left">
 
         <div class="auth-brand">
@@ -13,25 +379,42 @@
 
             <div>
                 <h2>SmartHire Payroll</h2>
-                <p>Modern Payroll & HR SaaS</p>
+                <p>Simple. Smart. Professional Payroll SaaS</p>
             </div>
         </div>
 
         <div class="auth-demo-badge">
-            🚀 Free Demo Available — Up to 10 Employees
+            🚀 Launch Offer — All Features Free for 10 Days
         </div>
 
         <h1>
             Manage payroll,
-            attendance, leave
-            and compliance from
-            one dashboard.
+            attendance, leave and
+            compliance from <span>one dashboard.</span>
         </h1>
 
         <p class="auth-description">
-            Professional payroll software for employee management, attendance,
-            leave tracking, payslips, compliance, HR reports and payroll automation.
+            SmartHire Payroll helps SMEs process salary, manage attendance, track leave,
+            generate payslip PDFs, export Excel reports and handle Full & Final settlement
+            from one clean workspace.
         </p>
+
+        <div class="auth-metrics">
+            <div class="auth-metric">
+                <b>10 Days</b>
+                <span>Free Launch Access</span>
+            </div>
+
+            <div class="auth-metric">
+                <b>10 Emp</b>
+                <span>Free Demo Limit</span>
+            </div>
+
+            <div class="auth-metric">
+                <b>PDF + Excel</b>
+                <span>Reports Included</span>
+            </div>
+        </div>
 
         <div class="auth-feature-list">
 
@@ -61,11 +444,15 @@
             </div>
 
             <div class="auth-feature">
-                <span>🛡️</span>
-                <p>PF / ESIC / PT / LWF Compliance</p>
+                <span>🧾</span>
+                <p>Full & Final Settlement</p>
             </div>
 
         </div>
+
+        <p class="auth-bottom-note">
+            Built for Indian SMEs, HR teams, payroll consultants and growing businesses.
+        </p>
 
     </div>
 
@@ -76,15 +463,14 @@
         <h1>Login</h1>
 
         <p class="auth-subtext">
-            Sign in to access your payroll dashboard.
+            Sign in to access your SmartHire Payroll dashboard.
         </p>
 
         <div class="login-demo-note">
-            <b>Free Demo Mode Active</b>
+            <b>Free Launch Offer Active</b>
             <span>
-                New companies can try SmartHire Payroll with up to 10 employees.
-                Paid PRO plans will be available soon.
-            </span>
+    Use payroll, payslip PDF, Excel reports, HR audit, leave and F&F settlement free during the launch offer.
+</span>
         </div>
 
         <form method="POST" class="auth-form">
@@ -94,6 +480,7 @@
                 type="text"
                 name="username"
                 placeholder="Enter username"
+                autocomplete="username"
                 required
             >
 
@@ -102,11 +489,12 @@
                 type="password"
                 name="password"
                 placeholder="Enter password"
+                autocomplete="current-password"
                 required
             >
 
             <button type="submit">
-                Login
+                Login to Payroll Dashboard
             </button>
 
         </form>
@@ -118,6 +506,22 @@
                     Create company admin
                 </a>
             </p>
+        </div>
+
+        <div class="auth-contact-strip">
+            <span>
+                Website:
+                <a href="https://www.smarthireai.in" target="_blank">
+                    www.smarthireai.in
+                </a>
+            </span>
+
+            <span>
+                Email:
+                <a href="mailto:info@smarthireai.in">
+                    info@smarthireai.in
+                </a>
+            </span>
         </div>
 
     </div>
