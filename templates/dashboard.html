@@ -155,8 +155,8 @@ Monthly payroll control center for attendance, salary processing, compliance and
             <h2 class="plan-text">{{ plan_name|upper }}</h2>
             <p>Active till {{ subscription_end_date }}</p>
         {% else %}
-            <h2 class="plan-text">FREE DEMO</h2>
-            <p>{{ employee_count|default(0) }} / 10 employees used</p>
+            <h2 class="plan-text">FREE PLAN</h2>
+            <p>{{ employee_count|default(0) }} / 5 employees used</p>
         {% endif %}
     </div>
 
@@ -253,7 +253,7 @@ Monthly payroll control center for attendance, salary processing, compliance and
     <div class="alert-card info">
         <div class="alert-icon">i</div>
         <div>
-            <h3>Free Demo Workspace</h3>
+            <h3>Free Plan Workspace</h3>
             <p>Demo mode active. Upgrade to unlock Excel, payslips, audit reports and unlimited employees.</p>
         </div>
         <a href="{{ url_for('pricing') }}">Plans</a>

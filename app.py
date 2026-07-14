@@ -22,23 +22,24 @@ app = Flask(__name__)
 app.secret_key = "change-this-secret-key"
 
 # =========================
-# LOCAL PAYMENT TEST CONFIG
+# PAYMENT / SUBSCRIPTION CONFIG
 # =========================
-RAZORPAY_KEY_ID = "rzp_test_SfKO3IFwsgnWhC"
-RAZORPAY_KEY_SECRET = "F7CyUtorZhRe4q8YXtIefnv9"
+# Live/Test keys .env or hosting environment variables se set karna hai.
+# Keys ko code me hardcode nahi karna.
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "").strip()
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", os.getenv("RAZORPAY_SECRET", "")).strip()
 
-razorpay_client = razorpay.Client(
-    auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET)
+razorpay_client = (
+    razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
+    if RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET
+    else None
 )
 
-# Local testing ke liye True rakho
-PAYMENTS_ENABLED = False
-
-# Local payment test ke liye False rakho
+PAYMENTS_ENABLED = os.getenv("PAYMENTS_ENABLED", "false").strip().lower() in ["1", "true", "yes", "on"]
 DEMO_MODE = False
 
-
-FREE_EMPLOYEE_LIMIT = 10
+# Final rule: 1–5 employees all features free. Above 5 employees yearly subscription required.
+FREE_EMPLOYEE_LIMIT = 5
 
 ADMIN_USERNAMES = [
     "smarthireai5"
@@ -542,6 +543,130 @@ def create_error_report(row_errors, filename="upload_errors.xlsx"):
     return file_path
 
 
+
+# ---------------------------
+# YEARLY SUBSCRIPTION PLANS
+# ---------------------------
+YEARLY_PRICING_PLANS = {
+    "yearly_6_25": {
+        "plan_id": "yearly_6_25",
+        "name": "Yearly Starter",
+        "price": 9999,
+        "duration_days": 365,
+        "employee_from": 6,
+        "employee_to": 25,
+        "label": "6–25 Employees · 1 Year",
+        "button_text": "Start Yearly Plan - ₹9,999",
+        "badge": "Starter"
+    },
+    "yearly_26_50": {
+        "plan_id": "yearly_26_50",
+        "name": "Yearly Growth",
+        "price": 14999,
+        "duration_days": 365,
+        "employee_from": 26,
+        "employee_to": 50,
+        "label": "26–50 Employees · 1 Year",
+        "button_text": "Start Yearly Plan - ₹14,999",
+        "badge": "Growth"
+    },
+    "yearly_51_100": {
+        "plan_id": "yearly_51_100",
+        "name": "Yearly Business",
+        "price": 19999,
+        "duration_days": 365,
+        "employee_from": 51,
+        "employee_to": 100,
+        "label": "51–100 Employees · 1 Year",
+        "button_text": "Start Yearly Plan - ₹19,999",
+        "badge": "Business"
+    },
+    "yearly_101_200": {
+        "plan_id": "yearly_101_200",
+        "name": "Yearly Professional",
+        "price": 24999,
+        "duration_days": 365,
+        "employee_from": 101,
+        "employee_to": 200,
+        "label": "101–200 Employees · 1 Year",
+        "button_text": "Start Yearly Plan - ₹24,999",
+        "badge": "Professional"
+    },
+    "yearly_201_400": {
+        "plan_id": "yearly_201_400",
+        "name": "Yearly Enterprise",
+        "price": 29999,
+        "duration_days": 365,
+        "employee_from": 201,
+        "employee_to": 400,
+        "label": "201–400 Employees · 1 Year",
+        "button_text": "Start Yearly Plan - ₹29,999",
+        "badge": "Enterprise"
+    },
+    "yearly_401_plus": {
+        "plan_id": "yearly_401_plus",
+        "name": "Yearly Unlimited",
+        "price": 39999,
+        "duration_days": 365,
+        "employee_from": 401,
+        "employee_to": None,
+        "label": "401+ Employees · 1 Year",
+        "button_text": "Start Yearly Plan - ₹39,999",
+        "badge": "Unlimited"
+    }
+}
+
+
+def get_subscription_pricing_plans():
+    return YEARLY_PRICING_PLANS
+
+
+def get_subscription_plan(plan_id):
+    plan_id = str(plan_id or "").strip().lower()
+    return YEARLY_PRICING_PLANS.get(plan_id)
+
+
+def get_company_employee_count(company_id=None):
+    if company_id is None:
+        company_id = current_company_id()
+
+    if not company_id:
+        return 0
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT COUNT(*) AS count
+        FROM employees
+        WHERE company_id = ?
+    """, (company_id,))
+
+    row = cur.fetchone()
+    conn.close()
+
+    return int((row["count"] if row else 0) or 0)
+
+
+def get_recommended_yearly_plan(employee_count):
+    employee_count = int(employee_count or 0)
+
+    if employee_count <= FREE_EMPLOYEE_LIMIT:
+        return None
+
+    for plan in YEARLY_PRICING_PLANS.values():
+        employee_from = int(plan["employee_from"])
+        employee_to = plan["employee_to"]
+
+        if employee_to is None and employee_count >= employee_from:
+            return plan
+
+        if employee_to is not None and employee_from <= employee_count <= int(employee_to):
+            return plan
+
+    return YEARLY_PRICING_PLANS["yearly_401_plus"]
+
+
 def ensure_subscription_valid():
     conn = get_db()
     cur = conn.cursor()
@@ -777,7 +902,7 @@ def is_pro_user():
     return False
 
 
-def require_pro_feature(message="Upgrade to PRO to use this feature."):
+def require_pro_feature(message="Upgrade to yearly plan to use this feature."):
     if is_campaign_free_mode():
         return True
 
@@ -789,7 +914,22 @@ def require_pro_feature(message="Upgrade to PRO to use this feature."):
     if active_plan and active_plan.get("is_pro") is True:
         return True
 
-    flash(message, "warning")
+    employee_count = get_company_employee_count()
+
+    # 1–5 employees tak all features free.
+    if employee_count <= FREE_EMPLOYEE_LIMIT:
+        return True
+
+    recommended_plan = get_recommended_yearly_plan(employee_count)
+    plan_text = ""
+    if recommended_plan:
+        plan_text = f" Recommended plan: {recommended_plan['name']} - ₹{recommended_plan['price']}/year."
+
+    flash(
+        f"{message} Free plan allows up to {FREE_EMPLOYEE_LIMIT} employees. "
+        f"Your workspace has {employee_count} employees.{plan_text}",
+        "warning"
+    )
     return False
 
 
@@ -821,27 +961,21 @@ def can_add_employee():
     if not company_id:
         return False, "Company not found. Please login again."
 
-    conn = get_db()
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT COUNT(*) AS count
-        FROM employees
-        WHERE company_id = ?
-    """, (company_id,))
-
-    result = cur.fetchone()
-    employee_count = result["count"] if result else 0
-
-    conn.close()
+    employee_count = get_company_employee_count(company_id)
 
     if employee_count >= FREE_EMPLOYEE_LIMIT:
+        recommended_plan = get_recommended_yearly_plan(employee_count + 1)
+        plan_text = ""
+        if recommended_plan:
+            plan_text = f" Recommended plan: {recommended_plan['name']} - ₹{recommended_plan['price']}/year."
+
         return False, (
             f"Free plan allows up to {FREE_EMPLOYEE_LIMIT} employees only. "
-            "Please upgrade to PRO to add unlimited employees."
+            f"Please activate a yearly subscription to add more employees.{plan_text}"
         )
 
     return True, ""
+
 
 
 # ---------------------------
@@ -1632,27 +1766,10 @@ def dashboard():
 def pricing():
     company_id = current_company_id()
 
-    plans = {
-        "monthly": {
-            "plan_id": "monthly",
-            "name": "PRO Monthly",
-            "price": 999,
-            "duration_days": 30,
-            "label": "Valid for 30 days",
-            "button_text": "Start Monthly PRO - ₹999"
-        },
-        "yearly": {
-            "plan_id": "yearly",
-            "name": "PRO Yearly",
-            "price": 9999,
-            "duration_days": 365,
-            "label": "Valid for 365 days",
-            "button_text": "Start Yearly PRO - ₹9999",
-            "saving_text": "Save ₹1,989"
-        }
-    }
-
+    plans = get_subscription_pricing_plans()
     active_plan = get_active_plan()
+    employee_count = get_company_employee_count(company_id)
+    recommended_plan = get_recommended_yearly_plan(employee_count)
 
     conn = get_db()
     cur = conn.cursor()
@@ -1678,32 +1795,66 @@ def pricing():
         plans=plans,
         active_subscription=active_subscription,
         active_plan=active_plan,
-        payments_enabled=PAYMENTS_ENABLED
+        payments_enabled=PAYMENTS_ENABLED,
+        employee_count=employee_count,
+        free_employee_limit=FREE_EMPLOYEE_LIMIT,
+        recommended_plan=recommended_plan
     )
 
 
 @app.route("/create-order", methods=["POST"])
 @login_required
 def create_order():
-    data = request.get_json()
-    amount = int(data.get("amount", 0)) * 100
+    if not PAYMENTS_ENABLED:
+        return jsonify({"status": "failed", "message": "Payments are currently disabled."}), 403
 
-    if amount <= 0:
-        return jsonify({"status": "failed", "message": "Invalid amount"}), 400
+    if not razorpay_client:
+        return jsonify({
+            "status": "failed",
+            "message": "Razorpay keys are missing. Please configure live keys."
+        }), 500
 
-    order = razorpay_client.order.create({
-        "amount": amount,
-        "currency": "INR",
-        "payment_capture": 1
-    })
-    return jsonify(order)
+    data = request.get_json(silent=True) or {}
+    plan_id = str(data.get("plan_id", "")).strip().lower()
+
+    selected_plan = get_subscription_plan(plan_id)
+
+    if not selected_plan:
+        return jsonify({"status": "failed", "message": "Invalid yearly plan selected."}), 400
+
+    amount_paise = int(selected_plan["price"]) * 100
+
+    try:
+        order = razorpay_client.order.create({
+            "amount": amount_paise,
+            "currency": "INR",
+            "payment_capture": 1,
+            "notes": {
+                "company_id": str(current_company_id() or ""),
+                "plan_id": selected_plan["plan_id"],
+                "plan_name": selected_plan["name"]
+            }
+        })
+
+        order["key_id"] = RAZORPAY_KEY_ID
+        order["plan_id"] = selected_plan["plan_id"]
+        order["plan_name"] = selected_plan["name"]
+        order["amount_rupees"] = selected_plan["price"]
+
+        return jsonify(order)
+
+    except Exception as e:
+        return jsonify({"status": "failed", "message": str(e)}), 500
 
 
 @app.route("/payment-success", methods=["POST"])
 @login_required
 def payment_success():
     if not PAYMENTS_ENABLED:
-        return "Payments are currently disabled. Free demo plan is active.", 403
+        return "Payments are currently disabled.", 403
+
+    if not razorpay_client:
+        return "Razorpay keys are missing. Please configure live keys.", 500
 
     user_id = session.get("user_id")
     company_id = current_company_id()
@@ -1714,57 +1865,28 @@ def payment_success():
     payment_id = request.form.get("razorpay_payment_id", "").strip()
     order_id = request.form.get("razorpay_order_id", "").strip()
     signature = request.form.get("razorpay_signature", "").strip()
+    plan_id = request.form.get("plan_id", "").strip().lower()
 
-    plan_id = request.form.get("plan_id", "monthly").strip().lower()
+    selected_plan = get_subscription_plan(plan_id)
 
-    plans = {
-        "monthly": {
-            "plan_name": "PRO Monthly",
-            "amount": 999,
-            "duration_days": 30
-        },
-        "yearly": {
-            "plan_name": "PRO Yearly",
-            "amount": 9999,
-            "duration_days": 365
-        }
-    }
+    if not selected_plan:
+        return "Invalid yearly plan selected", 400
 
-    if plan_id not in plans:
-        return "Invalid plan selected", 400
+    if not payment_id or not order_id or not signature:
+        return "Payment verification details missing", 400
 
-    if not payment_id:
-        return "Payment ID missing", 400
-
-    selected_plan = plans[plan_id]
-
-    amount = selected_plan["amount"]
-    plan_name = selected_plan["plan_name"]
-    duration_days = selected_plan["duration_days"]
-
-    # Razorpay payment verification
     try:
-        payment_details = razorpay_client.payment.fetch(payment_id)
+        razorpay_client.utility.verify_payment_signature({
+            "razorpay_order_id": order_id,
+            "razorpay_payment_id": payment_id,
+            "razorpay_signature": signature
+        })
+    except Exception:
+        return "Payment signature verification failed", 400
 
-        if not payment_details:
-            return "Unable to verify payment.", 400
-
-        razorpay_status = payment_details.get("status", "")
-        razorpay_amount = int(payment_details.get("amount", 0))
-        expected_amount = int(amount * 100)
-
-        if razorpay_status not in ["authorized", "captured"]:
-            return f"Payment not successful. Current status: {razorpay_status}", 400
-
-        if razorpay_amount != expected_amount:
-            return "Payment amount mismatch.", 400
-
-        # If payment is only authorized, capture it
-        if razorpay_status == "authorized":
-            razorpay_client.payment.capture(payment_id, expected_amount)
-
-    except Exception as verify_error:
-        return f"Payment verification failed: {str(verify_error)}", 400
+    amount = selected_plan["price"]
+    plan_name = selected_plan["name"]
+    duration_days = selected_plan["duration_days"]
 
     start_date = datetime.datetime.now()
     end_date = start_date + datetime.timedelta(days=duration_days)
@@ -1795,7 +1917,7 @@ def payment_success():
               AND status = 'active'
         """, (company_id,))
 
-        # Activate new subscription
+        # Activate new yearly subscription
         cur.execute("""
             INSERT INTO subscriptions (
                 company_id,
