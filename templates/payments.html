@@ -68,7 +68,7 @@
         <span class="section-tag">CURRENT WORKSPACE PLAN</span>
 
         {% if campaign_free_mode %}
-            <h2>FREE LAUNCH OFFER</h2>
+            <h2>FREE PLAN</h2>
             <p>
                 All SmartHire Payroll features are temporarily unlocked under the launch campaign.
                 You can use payroll processing, payslip PDF, Excel reports, HR audit, leave management
@@ -76,7 +76,7 @@
             </p>
 
             <div class="launch-offer-note">
-                Launch offer active: enjoy full payroll access for a limited time. After the campaign ends,
+                Free plan active: enjoy full payroll access for up to 5 employees. Above 5 employees,
                 paid subscription will be required to continue using premium downloads and advanced reports.
             </div>
 
@@ -148,7 +148,7 @@
         </div>
 
         {% if campaign_free_mode %}
-            <span class="launch-badge">FREE LAUNCH OFFER</span>
+            <span class="launch-badge">FREE PLAN</span>
         {% elif active_plan and active_plan.get("is_pro") %}
             <span class="badge pro">PRO ACTIVE</span>
         {% else %}
@@ -310,7 +310,7 @@
 
     {% if campaign_free_mode %}
         <p>
-            No payment is required during the launch offer. Your payment records will appear here
+            No payment is required for companies with up to 5 employees. Your payment records will appear here
             after subscription payments start.
         </p>
 
