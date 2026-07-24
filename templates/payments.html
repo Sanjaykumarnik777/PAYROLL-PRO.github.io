@@ -237,10 +237,12 @@
             <thead>
                 <tr>
                     <th>Amount</th>
+                    <th>Invoice No</th>
                     <th>Payment ID</th>
                     <th>Order ID</th>
                     <th>Status</th>
                     <th>Date</th>
+                    <th>Invoice PDF</th>
                 </tr>
             </thead>
 
@@ -254,6 +256,12 @@
                         <span class="salary-box">
                             ₹{{ row["amount"]|default(0)|round|int }}
                         </span>
+                    </td>
+
+                    <td>
+                        <div class="payment-id">
+                            {{ row["invoice_no"] or "-" }}
+                        </div>
                     </td>
 
                     <td>
@@ -286,6 +294,16 @@
 
                     <td>
                         {{ row["created_at"] or "-" }}
+                    </td>
+
+                    <td>
+                        {% if row["invoice_id"] %}
+                            <a href="{{ url_for('download_invoice', invoice_id=row['invoice_id']) }}" class="secondary-btn">
+                                Download Invoice
+                            </a>
+                        {% else %}
+                            -
+                        {% endif %}
                     </td>
 
                 </tr>

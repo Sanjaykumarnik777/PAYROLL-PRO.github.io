@@ -48,9 +48,17 @@ ADMIN_USERNAMES = [
 DB_NAME = "payroll_pro.db"
 UPLOAD_FOLDER = "uploads"
 PAYSLIP_FOLDER = "payslips"
+INVOICE_FOLDER = "subscription_invoices"
+
+# Common invoice counter DB path.
+# Server par isko /var/lib/smarthire/invoice_counter.db set karenge,
+# taaki Payroll Pro aur CMPF dono same invoice sequence use karein.
+COMMON_INVOICE_DB = os.getenv("COMMON_INVOICE_DB", "invoice_counter.db")
+INVOICE_PREFIX = os.getenv("INVOICE_PREFIX", "INV")
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PAYSLIP_FOLDER, exist_ok=True)
+os.makedirs(INVOICE_FOLDER, exist_ok=True)
 
 
 # ---------------------------
@@ -383,6 +391,32 @@ def init_db():
 
     safe_add_column(cur, "payments", "user_id", "INTEGER")
 
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS subscription_invoices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        company_id INTEGER NOT NULL,
+        user_id INTEGER,
+        product_type TEXT NOT NULL DEFAULT 'PAYROLL_PRO',
+        invoice_no TEXT NOT NULL UNIQUE,
+        plan_id TEXT,
+        plan_name TEXT,
+        amount REAL DEFAULT 0,
+        discount REAL DEFAULT 0,
+        grand_total REAL DEFAULT 0,
+        payment_id TEXT UNIQUE,
+        order_id TEXT,
+        payment_mode TEXT DEFAULT 'Razorpay',
+        status TEXT DEFAULT 'PAID',
+        invoice_date TEXT,
+        subscription_start TEXT,
+        subscription_end TEXT,
+        pdf_path TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY(company_id) REFERENCES companies(id)
+    )
+    """)
+
+
     conn.commit()
     conn.close()
 
@@ -475,6 +509,346 @@ def add_payment_order_id_column():
 
     conn.commit()
     conn.close()
+
+
+
+# ---------------------------
+# SUBSCRIPTION INVOICE HELPERS
+# ---------------------------
+def ensure_common_invoice_db():
+    folder = os.path.dirname(COMMON_INVOICE_DB)
+    if folder:
+        os.makedirs(folder, exist_ok=True)
+
+    conn = sqlite3.connect(COMMON_INVOICE_DB, timeout=30)
+    cur = conn.cursor()
+    cur.execute("PRAGMA busy_timeout = 10000")
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS invoice_sequences (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            year INTEGER NOT NULL UNIQUE,
+            last_number INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def get_next_global_invoice_no():
+    ensure_common_invoice_db()
+
+    year = datetime.datetime.now().year
+    now_text = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    conn = sqlite3.connect(COMMON_INVOICE_DB, timeout=30, isolation_level=None)
+    cur = conn.cursor()
+    cur.execute("PRAGMA busy_timeout = 10000")
+
+    try:
+        # BEGIN IMMEDIATE prevents duplicate invoice numbers during same-time payments.
+        cur.execute("BEGIN IMMEDIATE")
+
+        cur.execute("""
+            SELECT last_number
+            FROM invoice_sequences
+            WHERE year = ?
+        """, (year,))
+
+        row = cur.fetchone()
+
+        if row:
+            next_number = int(row[0] or 0) + 1
+            cur.execute("""
+                UPDATE invoice_sequences
+                SET last_number = ?, updated_at = ?
+                WHERE year = ?
+            """, (next_number, now_text, year))
+        else:
+            next_number = 1
+            cur.execute("""
+                INSERT INTO invoice_sequences (year, last_number, updated_at)
+                VALUES (?, ?, ?)
+            """, (year, next_number, now_text))
+
+        conn.commit()
+        return f"{INVOICE_PREFIX}-{year}-{next_number:03d}"
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
+
+
+def invoice_clean(value, default="-"):
+    value = "" if value is None else str(value).strip()
+    if not value or value.lower() in ["none", "nan", "null"]:
+        return default
+    return value
+
+
+def wrap_pdf_text(value, max_chars=80):
+    words = invoice_clean(value, "").split()
+    if not words:
+        return ["-"]
+
+    lines = []
+    current = ""
+
+    for word in words:
+        if len(current) + len(word) + 1 <= max_chars:
+            current = (current + " " + word).strip()
+        else:
+            lines.append(current)
+            current = word
+
+    if current:
+        lines.append(current)
+
+    return lines or ["-"]
+
+
+def draw_wrapped_pdf_text(c, value, x, y, max_chars=80, line_height=11, font="Helvetica", size=9):
+    c.setFont(font, size)
+    for line in wrap_pdf_text(value, max_chars):
+        c.drawString(x, y, line)
+        y -= line_height
+    return y
+
+
+def generate_subscription_invoice_pdf(invoice_id):
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT
+            si.*,
+            c.company_name,
+            c.address AS customer_address,
+            c.email AS customer_email,
+            c.phone AS customer_phone,
+            u.full_name AS user_full_name,
+            u.username AS user_email
+        FROM subscription_invoices si
+        LEFT JOIN companies c ON c.id = si.company_id
+        LEFT JOIN users u ON u.id = si.user_id
+        WHERE si.id = ?
+    """, (invoice_id,))
+
+    invoice = cur.fetchone()
+    conn.close()
+
+    if not invoice:
+        raise ValueError("Invoice record not found")
+
+    os.makedirs(INVOICE_FOLDER, exist_ok=True)
+
+    invoice_no = invoice_clean(invoice["invoice_no"], f"invoice_{invoice_id}")
+    safe_invoice_no = "".join(ch if ch.isalnum() or ch in ["-", "_"] else "_" for ch in invoice_no)
+    pdf_path = invoice["pdf_path"] or os.path.join(INVOICE_FOLDER, f"{safe_invoice_no}.pdf")
+
+    c = canvas.Canvas(pdf_path, pagesize=letter)
+    width, height = letter
+
+    left = 42
+    right = width - 42
+    top = height - 42
+
+    # Border
+    c.setStrokeColorRGB(0, 0, 0)
+    c.rect(30, 30, width - 60, height - 60, fill=0, stroke=1)
+
+    # Header
+    c.setFont("Helvetica-Bold", 18)
+    c.drawString(left, top, "SmartHire AI")
+
+    c.setFont("Helvetica-Bold", 14)
+    c.drawRightString(right, top, "SUBSCRIPTION INVOICE / RECEIPT")
+
+    c.setFont("Helvetica", 9)
+    y = top - 18
+    c.drawString(left, y, "AI-Powered Payroll & HR Software")
+    y -= 12
+    c.drawString(left, y, "Nagpur, Maharashtra, India")
+    y -= 12
+    c.drawString(left, y, "Email: info@smarthireai.in | Website: www.smarthireai.in")
+
+    # Invoice details box
+    box_y = top - 92
+    c.rect(left, box_y - 72, right - left, 72, fill=0, stroke=1)
+
+    c.setFont("Helvetica-Bold", 9)
+    c.drawString(left + 10, box_y - 18, "Invoice No:")
+    c.drawString(left + 10, box_y - 36, "Invoice Date:")
+    c.drawString(left + 10, box_y - 54, "Status:")
+
+    c.setFont("Helvetica", 9)
+    c.drawString(left + 95, box_y - 18, invoice_clean(invoice["invoice_no"]))
+    c.drawString(left + 95, box_y - 36, invoice_clean(invoice["invoice_date"]))
+    c.drawString(left + 95, box_y - 54, invoice_clean(invoice["status"], "PAID").upper())
+
+    c.setFont("Helvetica-Bold", 9)
+    c.drawString(width / 2 + 20, box_y - 18, "Product:")
+    c.drawString(width / 2 + 20, box_y - 36, "Payment Mode:")
+    c.drawString(width / 2 + 20, box_y - 54, "Valid Till:")
+
+    c.setFont("Helvetica", 9)
+    c.drawString(width / 2 + 115, box_y - 18, "SmartHireAI Payroll Pro")
+    c.drawString(width / 2 + 115, box_y - 36, invoice_clean(invoice["payment_mode"], "Razorpay"))
+    c.drawString(width / 2 + 115, box_y - 54, invoice_clean(invoice["subscription_end"]))
+
+    # Bill To
+    y = box_y - 105
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(left, y, "Bill To:")
+    y -= 16
+
+    c.setFont("Helvetica-Bold", 9)
+    c.drawString(left, y, invoice_clean(invoice["company_name"], "Customer Company"))
+    y -= 12
+
+    c.setFont("Helvetica", 9)
+    y = draw_wrapped_pdf_text(c, invoice_clean(invoice["customer_address"], ""), left, y, 80, 11, "Helvetica", 9)
+
+    customer_email = invoice_clean(invoice["customer_email"], invoice_clean(invoice["user_email"], ""))
+    customer_phone = invoice_clean(invoice["customer_phone"], "")
+
+    if customer_email not in ["", "-"]:
+        c.drawString(left, y, f"Email: {customer_email}")
+        y -= 12
+
+    if customer_phone not in ["", "-"]:
+        c.drawString(left, y, f"Phone: {customer_phone}")
+        y -= 12
+
+    # Item table
+    table_top = y - 20
+    c.rect(left, table_top - 105, right - left, 105, fill=0, stroke=1)
+
+    c.setFont("Helvetica-Bold", 9)
+    c.drawString(left + 10, table_top - 18, "Description")
+    c.drawRightString(right - 10, table_top - 18, "Amount")
+
+    c.line(left, table_top - 28, right, table_top - 28)
+
+    c.setFont("Helvetica", 9)
+    description = f"SmartHireAI Payroll Pro Software - Yearly Subscription ({invoice_clean(invoice['plan_name'])})"
+    draw_wrapped_pdf_text(c, description, left + 10, table_top - 46, 72, 11, "Helvetica", 9)
+
+    amount = float(invoice["grand_total"] or invoice["amount"] or 0)
+    c.drawRightString(right - 10, table_top - 46, f"Rs. {amount:,.2f}")
+
+    c.line(left, table_top - 78, right, table_top - 78)
+
+    c.setFont("Helvetica-Bold", 9)
+    c.drawRightString(right - 130, table_top - 96, "Grand Total:")
+    c.drawRightString(right - 10, table_top - 96, f"Rs. {amount:,.2f}")
+
+    # Razorpay details
+    y = table_top - 135
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(left, y, "Payment Details")
+    y -= 16
+
+    c.setFont("Helvetica", 9)
+    c.drawString(left, y, f"Razorpay Payment ID: {invoice_clean(invoice['payment_id'])}")
+    y -= 13
+    c.drawString(left, y, f"Razorpay Order ID: {invoice_clean(invoice['order_id'])}")
+    y -= 13
+    c.drawString(left, y, f"Subscription Start: {invoice_clean(invoice['subscription_start'])}")
+    y -= 13
+    c.drawString(left, y, f"Subscription End: {invoice_clean(invoice['subscription_end'])}")
+
+    # Note
+    y -= 30
+    c.setFont("Helvetica-Oblique", 8.5)
+    c.drawString(left, y, "Note: GST is not charged in this invoice. This is a software subscription payment receipt/invoice.")
+
+    # Footer
+    c.setFont("Helvetica", 8)
+    c.drawCentredString(width / 2, 50, "Thank you for choosing SmartHireAI Payroll.")
+
+    c.save()
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE subscription_invoices
+        SET pdf_path = ?
+        WHERE id = ?
+    """, (pdf_path, invoice_id))
+    conn.commit()
+    conn.close()
+
+    return pdf_path
+
+
+def create_subscription_invoice_record(
+    cur,
+    company_id,
+    user_id,
+    plan_id,
+    plan_name,
+    amount,
+    payment_id,
+    order_id,
+    start_date,
+    end_date
+):
+    invoice_no = get_next_global_invoice_no()
+    invoice_date = start_date.strftime("%Y-%m-%d")
+    created_at = start_date.strftime("%Y-%m-%d %H:%M:%S")
+
+    safe_invoice_no = "".join(ch if ch.isalnum() or ch in ["-", "_"] else "_" for ch in invoice_no)
+    pdf_path = os.path.join(INVOICE_FOLDER, f"{safe_invoice_no}.pdf")
+
+    cur.execute("""
+        INSERT INTO subscription_invoices (
+            company_id,
+            user_id,
+            product_type,
+            invoice_no,
+            plan_id,
+            plan_name,
+            amount,
+            discount,
+            grand_total,
+            payment_id,
+            order_id,
+            payment_mode,
+            status,
+            invoice_date,
+            subscription_start,
+            subscription_end,
+            pdf_path,
+            created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        company_id,
+        user_id,
+        "PAYROLL_PRO",
+        invoice_no,
+        plan_id,
+        plan_name,
+        amount,
+        0,
+        amount,
+        payment_id,
+        order_id,
+        "Razorpay",
+        "PAID",
+        invoice_date,
+        start_date.strftime("%Y-%m-%d"),
+        end_date.strftime("%Y-%m-%d"),
+        pdf_path,
+        created_at
+    ))
+
+    return cur.lastrowid
+
 
 
 # ---------------------------
@@ -1957,7 +2331,25 @@ def payment_success():
             start_date.strftime("%Y-%m-%d %H:%M:%S")
         ))
 
+        invoice_id = create_subscription_invoice_record(
+            cur=cur,
+            company_id=company_id,
+            user_id=user_id,
+            plan_id=plan_id,
+            plan_name=plan_name,
+            amount=amount,
+            payment_id=payment_id,
+            order_id=order_id,
+            start_date=start_date,
+            end_date=end_date
+        )
+
         conn.commit()
+
+        try:
+            generate_subscription_invoice_pdf(invoice_id)
+        except Exception as invoice_error:
+            print("Invoice PDF generation failed:", invoice_error)
 
         return "success", 200
 
@@ -1982,16 +2374,22 @@ def payments():
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT 
-            id,
-            amount,
-            payment_id,
-            order_id,
-            status,
-            created_at
-        FROM payments
-        WHERE company_id = ?
-        ORDER BY id DESC
+        SELECT
+            p.id,
+            p.amount,
+            p.payment_id,
+            p.order_id,
+            p.status,
+            p.created_at,
+            si.id AS invoice_id,
+            si.invoice_no,
+            si.status AS invoice_status
+        FROM payments p
+        LEFT JOIN subscription_invoices si
+            ON si.company_id = p.company_id
+           AND si.payment_id = p.payment_id
+        WHERE p.company_id = ?
+        ORDER BY p.id DESC
     """, (company_id,))
 
     data = cur.fetchall()
@@ -2046,6 +2444,52 @@ def payments():
     active_plan=active_plan,
     campaign_free_mode=is_campaign_free_mode()
 )
+
+
+
+@app.route("/download-invoice/<int:invoice_id>")
+@login_required
+def download_invoice(invoice_id):
+    company_id = current_company_id()
+
+    if not company_id:
+        flash("Company not found. Please login again.", "danger")
+        return redirect(url_for("login"))
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT id, invoice_no, pdf_path
+        FROM subscription_invoices
+        WHERE id = ?
+          AND company_id = ?
+    """, (invoice_id, company_id))
+
+    invoice = cur.fetchone()
+    conn.close()
+
+    if not invoice:
+        flash("Invoice not found.", "danger")
+        return redirect(url_for("payments"))
+
+    pdf_path = invoice["pdf_path"]
+
+    if not pdf_path or not os.path.exists(pdf_path):
+        try:
+            pdf_path = generate_subscription_invoice_pdf(invoice_id)
+        except Exception as e:
+            flash(f"Invoice PDF could not be generated: {str(e)}", "danger")
+            return redirect(url_for("payments"))
+
+    invoice_no = invoice_clean(invoice["invoice_no"], f"invoice_{invoice_id}")
+    download_name = f"{invoice_no}.pdf"
+
+    return send_file(
+        pdf_path,
+        as_attachment=True,
+        download_name=download_name
+    )
 
 
 # ---------------------------
