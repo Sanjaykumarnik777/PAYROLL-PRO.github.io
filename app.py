@@ -654,7 +654,10 @@ def generate_subscription_invoice_pdf(invoice_id):
 
     left = 42
     right = width - 42
-    top = height - 42
+
+    # Header ko top border se safe distance par rakha hai.
+    # Pehle height - 42 tha, jisse PDF viewer me top border text ko touch/cut kar sakta tha.
+    top = height - 70
 
     # Border
     c.setStrokeColorRGB(0, 0, 0)
