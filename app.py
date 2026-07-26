@@ -23,7 +23,9 @@ from reportlab.lib.utils import ImageReader
 from reportlab.lib.pagesizes import A4, letter
 
 app = Flask(__name__)
-app.secret_key = "change-this-secret-key"
+app.secret_key = os.getenv("SECRET_KEY", "").strip()
+if not app.secret_key:
+    raise RuntimeError("SECRET_KEY environment variable is not configured.")
 
 # =========================
 # PAYMENT / SUBSCRIPTION CONFIG
