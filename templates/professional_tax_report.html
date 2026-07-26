@@ -1,0 +1,472 @@
+{% extends "base.html" %}
+
+{% block title %}Professional Tax Report | SmartHire Payroll{% endblock %}
+
+{% block page_heading %}Professional Tax Report{% endblock %}
+{% block page_subheading %}Month-wise Professional Tax summary and employee details.{% endblock %}
+
+{% block content %}
+
+<style>
+    .pt-filter-card {
+        border-radius: 18px;
+        margin-bottom: 18px;
+    }
+
+    .pt-filter-row {
+        display: flex;
+        gap: 12px;
+        align-items: end;
+        flex-wrap: wrap;
+    }
+
+    .pt-filter-row .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        min-width: 220px;
+    }
+
+    .pt-filter-row label {
+        font-size: 13px;
+        font-weight: 800;
+        color: #111827;
+    }
+
+    .pt-filter-row select {
+        min-height: 42px;
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        padding: 10px 12px;
+        background: #fff;
+    }
+
+    .pt-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+        border-radius: 10px;
+        padding: 10px 14px;
+        background: #111827;
+        color: #fff;
+        text-decoration: none;
+        border: none;
+        font-weight: 900;
+        cursor: pointer;
+    }
+
+    .pt-btn.secondary {
+        background: #fff;
+        color: #111827;
+        border: 1px solid #111827;
+    }
+
+    .pt-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(160px, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+    }
+
+    .pt-summary-grid .card h3 {
+        margin: 0 0 6px;
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    .pt-summary-grid .card h2 {
+        margin: 0;
+        color: #111827;
+        font-size: 22px;
+    }
+
+    .pt-paper-card {
+        border-radius: 18px;
+        overflow: hidden;
+    }
+
+    .pt-paper-toolbar {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+    }
+
+    .pt-paper-toolbar h2 {
+        margin: 0;
+    }
+
+    .pt-paper-toolbar p {
+        margin: 4px 0 0;
+        color: #64748b;
+    }
+
+    .pt-paper {
+        background: #ffffff;
+        border: 1px solid #d1d5db;
+        border-radius: 12px;
+        padding: 22px 26px;
+        font-family: "Courier New", Courier, monospace;
+        color: #111827;
+        overflow-x: auto;
+    }
+
+    .pt-company-lines {
+        display: grid;
+        grid-template-columns: 180px 18px minmax(360px, 1fr);
+        gap: 2px 8px;
+        font-size: 13px;
+        line-height: 1.45;
+        margin-bottom: 22px;
+        white-space: nowrap;
+    }
+
+    .pt-report-title {
+        text-align: center;
+        font-weight: 900;
+        font-size: 14px;
+        margin: 8px 0;
+    }
+
+    .pt-separator {
+        font-size: 13px;
+        letter-spacing: 0.4px;
+        white-space: nowrap;
+        color: #374151;
+        margin: 5px 0;
+    }
+
+    .pt-client-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: "Courier New", Courier, monospace;
+        font-size: 13px;
+        margin: 0;
+        min-width: 760px;
+    }
+
+    .pt-client-table th,
+    .pt-client-table td {
+        border: none;
+        padding: 3px 4px;
+        background: #fff;
+    }
+
+    .pt-client-table th {
+        font-weight: 900;
+        color: #111827;
+        text-transform: none;
+        font-size: 13px;
+    }
+
+    .pt-client-table td {
+        color: #111827;
+    }
+
+    .pt-client-table .num {
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .pt-client-table .center {
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .pt-total-line {
+        text-align: right;
+        font-family: "Courier New", Courier, monospace;
+        font-weight: 900;
+        margin: 8px 0;
+        font-size: 13px;
+    }
+
+    .pt-details-title {
+        text-align: center;
+        font-family: "Courier New", Courier, monospace;
+        font-weight: 900;
+        margin: 34px 0 8px;
+    }
+
+    .pt-note {
+        margin-top: 14px;
+        padding: 12px 14px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        color: #64748b;
+        line-height: 1.6;
+        font-size: 13px;
+    }
+
+    @media (max-width: 900px) {
+        .pt-summary-grid {
+            grid-template-columns: repeat(2, minmax(160px, 1fr));
+        }
+
+        .pt-company-lines {
+            grid-template-columns: 1fr;
+            white-space: normal;
+        }
+
+        .pt-company-lines .colon {
+            display: none;
+        }
+    }
+
+    @media (max-width: 620px) {
+        .pt-summary-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .pt-filter-row .form-group,
+        .pt-btn {
+            width: 100%;
+        }
+
+        .pt-paper {
+            padding: 16px;
+        }
+    }
+</style>
+
+<div class="card pt-filter-card">
+    <div class="table-header">
+        <div>
+            <span class="section-tag">PT REPORT</span>
+            <h2>Professional Tax Report</h2>
+            <p>Select payroll month and download the PT PDF report.</p>
+        </div>
+    </div>
+
+    <form
+        method="GET"
+        action="{{ url_for('professional_tax_report') }}"
+        class="pt-filter-row"
+    >
+        <div class="form-group">
+            <label for="month">Payroll Month</label>
+
+            <select name="month" id="month" required>
+                {% if not data.months %}
+                <option value="">No payroll month found</option>
+                {% endif %}
+
+                {% for month in data.months %}
+                <option
+                    value="{{ month }}"
+                    {% if selected_month == month %}selected{% endif %}
+                >
+                    {{ month }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button type="submit" class="pt-btn secondary">
+            View Report
+        </button>
+
+        {% if selected_month %}
+        <a
+            href="{{ url_for(
+                'download_professional_tax_pdf',
+                month=selected_month
+            ) }}"
+            class="pt-btn"
+        >
+            Download PT PDF
+        </a>
+        {% endif %}
+    </form>
+</div>
+
+{% if selected_month and data.details %}
+
+<div class="pt-summary-grid">
+    <div class="card">
+        <h3>Payroll Month</h3>
+        <h2>{{ data.month_label }}</h2>
+    </div>
+
+    <div class="card">
+        <h3>Total Employees</h3>
+        <h2>{{ data.total_employees }}</h2>
+    </div>
+
+    <div class="card">
+        <h3>PT Deducted Employees</h3>
+        <h2>{{ data.pt_deducted_employees }}</h2>
+    </div>
+
+    <div class="card">
+        <h3>Total PT Amount</h3>
+        <h2>₹{{ data.total_amount|round|int }}</h2>
+    </div>
+</div>
+
+<div class="card pt-paper-card">
+    <div class="pt-paper-toolbar">
+        <div>
+            <h2>Professional Tax Summary Sheet</h2>
+            <p>
+                Employee-wise gross earning and saved PT amount.
+            </p>
+        </div>
+
+        <a
+            href="{{ url_for(
+                'download_professional_tax_pdf',
+                month=selected_month
+            ) }}"
+            class="pt-btn"
+        >
+            Download PDF
+        </a>
+    </div>
+
+    <div class="pt-paper">
+        <div class="pt-company-lines">
+            <b>Company Name</b>
+            <span class="colon">:</span>
+            <span>
+                {{ (data.company.company_name or '-')|upper }}
+            </span>
+
+            <b>Company Address</b>
+            <span class="colon">:</span>
+            <span>
+                {{ data.company.company_address or '-' }}
+            </span>
+
+            <b>State</b>
+            <span class="colon">:</span>
+            <span>
+                {{ data.settings.pt_state or 'Maharashtra' }}
+            </span>
+
+            <b>PT Reg. No.</b>
+            <span class="colon">:</span>
+            <span>
+                {{ data.company.pt_registration_no or '-' }}
+            </span>
+        </div>
+
+        <div class="pt-report-title">
+            Professional Tax Report For {{ data.month_label }}
+        </div>
+
+        <div class="pt-separator">
+            ==============================================================================================
+        </div>
+
+        <table class="pt-client-table">
+            <thead>
+                <tr>
+                    <th style="text-align:left;">From</th>
+                    <th style="text-align:left;">To</th>
+                    <th style="text-align:left;">Rate</th>
+                    <th style="text-align:left;">No. of Employees</th>
+                    <th class="num">Amount</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for item in data.summary_rows %}
+                <tr>
+                    <td>{{ item['from']|round|int }}</td>
+                    <td>{{ item['to']|round|int }}</td>
+                    <td>{{ item['rate']|round|int }}</td>
+                    <td>{{ item['employees'] }}</td>
+                    <td class="num">
+                        {{ "%.2f"|format(item['amount']|float) }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="pt-separator">
+            ==============================================================================================
+        </div>
+
+        <div class="pt-total-line">
+            Total Amount:
+            {{ "%.2f"|format(data.total_amount|float) }}
+        </div>
+
+        <div class="pt-separator">
+            ==============================================================================================
+        </div>
+
+        <div class="pt-details-title">
+            PT Report Details
+        </div>
+
+        <div class="pt-separator">
+            ==============================================================================================
+        </div>
+
+        <table class="pt-client-table">
+            <thead>
+                <tr>
+                    <th class="center" style="width:70px;">
+                        Sr. No.
+                    </th>
+                    <th style="text-align:left;">
+                        Employee Name
+                    </th>
+                    <th style="text-align:left; width:130px;">
+                        Employee ID
+                    </th>
+                    <th class="num" style="width:150px;">
+                        Gross Earning
+                    </th>
+                    <th class="num" style="width:120px;">
+                        PT Amount
+                    </th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for row in data.details %}
+                <tr>
+                    <td class="center">{{ loop.index }}</td>
+                    <td>{{ row.employee_name }}</td>
+                    <td>{{ row.emp_code or '-' }}</td>
+                    <td class="num">
+                        {{ "%.2f"|format(row.gross_earning|float) }}
+                    </td>
+                    <td class="num">
+                        {{ "%.2f"|format(row.pt_amount|float) }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="pt-note">
+        This report uses the Professional Tax amount saved in
+        Payroll History. PT is not recalculated while generating
+        this report.
+    </div>
+</div>
+
+{% else %}
+
+<div class="card empty-state">
+    <div class="empty-icon">📄</div>
+    <h2>No PT data found</h2>
+    <p>
+        Run payroll for a month first, then generate the
+        Professional Tax Report.
+    </p>
+</div>
+
+{% endif %}
+
+{% endblock %}

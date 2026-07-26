@@ -77,6 +77,11 @@
                 <span>Payroll History</span>
             </a>
 
+            <a href="{{ url_for('professional_tax_report') }}"
+                class="{% if request.endpoint in ['professional_tax_report', 'download_professional_tax_pdf'] %}active{% endif %}">
+                 <span>Professional Tax Report</span>
+            </a>
+
             <a href="{{ url_for('full_and_final') }}" class="{% if request.endpoint == 'full_and_final' %}active{% endif %}">
                 <span>Full & Final Settlement</span>
             </a>

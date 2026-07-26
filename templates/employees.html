@@ -3,9 +3,91 @@
 {% block title %}Employees | SmartHire Payroll{% endblock %}
 
 {% block page_heading %}Employees{% endblock %}
-{% block page_subheading %}Manage employee master data, salary details, PF/ESIC and bank records.{% endblock %}
+{% block page_subheading %}Manage employee master data, contact details, statutory records and WhatsApp payslip readiness.{% endblock %}
 
 {% block content %}
+
+<style>
+    .contact-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        min-width: 170px;
+    }
+
+    .contact-stack b {
+        color: #111827;
+        font-size: 14px;
+    }
+
+    .contact-stack span {
+        color: #64748b;
+        font-size: 12px;
+        word-break: break-word;
+    }
+
+    .masked-value {
+        font-family: monospace;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        white-space: nowrap;
+    }
+
+    .address-cell {
+        min-width: 190px;
+        max-width: 250px;
+        white-space: normal;
+        line-height: 1.5;
+    }
+
+    .whatsapp-ready-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 7px 11px;
+        border-radius: 999px;
+        background: #dcfce7;
+        color: #166534;
+        border: 1px solid #86efac;
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .edit-employee-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 7px 12px;
+        border-radius: 999px;
+        background: #2563eb;
+        color: #ffffff !important;
+        border: 1px solid #2563eb;
+        font-size: 12px;
+        font-weight: 800;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+
+    .edit-employee-btn:hover {
+        background: #1d4ed8;
+        border-color: #1d4ed8;
+    }
+
+    .whatsapp-missing-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 7px 11px;
+        border-radius: 999px;
+        background: #fee2e2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+</style>
 
 <div class="card employee-summary-card">
     <div class="employee-summary-top">
@@ -24,8 +106,14 @@
     <form method="GET" class="filter-form employee-filter-form">
         <select name="department">
             <option value="">All Departments</option>
+
             {% for dept in departments %}
-            <option value="{{ dept['department'] }}" {% if selected_department == dept['department'] %}selected{% endif %}>
+            <option
+                value="{{ dept['department'] }}"
+                {% if selected_department == dept['department'] %}
+                selected
+                {% endif %}
+            >
                 {{ dept['department'] }}
             </option>
             {% endfor %}
@@ -34,7 +122,7 @@
         <input
             type="text"
             name="search"
-            placeholder="Search employee / code / role / department"
+            placeholder="Search employee / mobile / email / PAN"
             value="{{ search }}"
         >
 
@@ -46,11 +134,17 @@
     </form>
 
     <div class="action-row">
-        <a href="{{ url_for('download_employee_sample') }}" class="export-btn">
+        <a
+            href="{{ url_for('download_employee_sample') }}"
+            class="export-btn"
+        >
             Download Sample
         </a>
 
-        <a href="{{ url_for('upload_employees') }}" class="small-btn">
+        <a
+            href="{{ url_for('upload_employees') }}"
+            class="small-btn"
+        >
             Upload Employees
         </a>
     </div>
@@ -93,13 +187,27 @@
         <h2>{{ female_count|default(0) }}</h2>
         <p>Gender-wise summary</p>
     </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon">💬</div>
+        <h3>WhatsApp Ready</h3>
+        <h2>{{ whatsapp_ready_count|default(0) }}</h2>
+        <p>Valid mobile number saved</p>
+    </div>
+
+    <div class="card stat-card">
+        <div class="stat-icon">⚠️</div>
+        <h3>Mobile Missing</h3>
+        <h2>{{ mobile_missing_count|default(0) }}</h2>
+        <p>Cannot receive WhatsApp payslip</p>
+    </div>
 </div>
 
 <div class="card">
     <div class="table-header">
         <div>
             <h2>Employee Master</h2>
-            <p>Complete employee payroll, statutory and bank information.</p>
+            <p>Complete employee payroll, contact, statutory and bank information.</p>
         </div>
 
         <span class="table-count">
@@ -107,7 +215,9 @@
         </span>
     </div>
 
-    <p class="table-scroll-hint">Swipe left to view full employee details →</p>
+    <p class="table-scroll-hint">
+        Swipe left to view full employee details →
+    </p>
 
     <div class="table-wrapper">
         <table>
@@ -116,6 +226,10 @@
                     <th>Employee</th>
                     <th>Department</th>
                     <th>Gender</th>
+                    <th>Contact Details</th>
+                    <th>Aadhaar No.</th>
+                    <th>PAN No.</th>
+                    <th>Address</th>
                     <th>Salary</th>
                     <th>Tax Regime</th>
                     <th>UAN No.</th>
@@ -124,6 +238,8 @@
                     <th>Account No.</th>
                     <th>IFSC</th>
                     <th>Payroll Ready</th>
+                    <th>WhatsApp Status</th>
+                    <th>Action</th>
                 </tr>
             </thead>
 
@@ -135,6 +251,14 @@
                 {% set has_bank = row['bank_name'] and row['bank_name']|string|trim != '' %}
                 {% set has_account = row['account_no'] and row['account_no']|string|trim != '' %}
                 {% set has_ifsc = row['ifsc_code'] and row['ifsc_code']|string|trim != '' %}
+
+                {% set mobile = (row['mobile_no'] or '')|string|trim %}
+                {% set email = (row['email_id'] or '')|string|trim %}
+                {% set aadhaar = (row['aadhaar_no'] or '')|string|trim %}
+                {% set pan = (row['pan_no'] or '')|string|trim %}
+                {% set employee_address = (row['address'] or '')|string|trim %}
+
+                {% set whatsapp_ready = mobile|length == 10 %}
 
                 <tr>
                     <td>
@@ -168,6 +292,52 @@
                     </td>
 
                     <td>
+                        <div class="contact-stack">
+                            {% if mobile %}
+                                <b>{{ mobile }}</b>
+                            {% else %}
+                                <b style="color:#b91c1c;">Mobile Missing</b>
+                            {% endif %}
+
+                            {% if email %}
+                                <span>{{ email }}</span>
+                            {% else %}
+                                <span>Email not saved</span>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <td>
+                        {% if aadhaar|length >= 4 %}
+                            <span class="masked-value">
+                                XXXXXXXX{{ aadhaar[-4:] }}
+                            </span>
+                        {% else %}
+                            <span class="badge free">Missing</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if pan|length == 10 %}
+                            <span class="masked-value">
+                                {{ pan[:5] }}****{{ pan[-1:] }}
+                            </span>
+                        {% else %}
+                            <span class="badge free">Missing</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <div class="address-cell">
+                            {% if employee_address %}
+                                {{ employee_address }}
+                            {% else %}
+                                <span class="badge free">Missing</span>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <td>
                         <span class="salary-box">
                             ₹{{ row['monthly_salary']|default(0)|round|int }}
                         </span>
@@ -175,7 +345,9 @@
 
                     <td>
                         {% if row['tax_regime'] %}
-                            <span class="badge free">{{ row['tax_regime']|upper }}</span>
+                            <span class="badge free">
+                                {{ row['tax_regime']|upper }}
+                            </span>
                         {% else %}
                             <span class="badge free">NEW</span>
                         {% endif %}
@@ -228,7 +400,29 @@
                             <span class="badge free">Check</span>
                         {% endif %}
                     </td>
+
+                    <td>
+                        {% if whatsapp_ready %}
+                            <span class="whatsapp-ready-badge">
+                                Ready
+                            </span>
+                        {% else %}
+                            <span class="whatsapp-missing-badge">
+                                Mobile Missing
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <a
+                            href="{{ url_for('edit_employee', emp_code=row['emp_code']) }}"
+                            class="edit-employee-btn"
+                        >
+                            Edit
+                        </a>
+                    </td>
                 </tr>
+
                 {% endfor %}
             </tbody>
         </table>
@@ -242,7 +436,10 @@
     <h2>No employees found</h2>
     <p>Upload employee records to start payroll processing.</p>
 
-    <a href="{{ url_for('upload_employees') }}" class="primary-link">
+    <a
+        href="{{ url_for('upload_employees') }}"
+        class="primary-link"
+    >
         Upload Employees
     </a>
 </div>

@@ -9,10 +9,13 @@ Start free for up to {{ free_employee_limit }} employees. Choose a yearly plan w
 
 {% block content %}
 
+{% set has_paid_plan = active_plan and active_plan.get("is_pro") %}
+{% set free_plan_current = (not has_paid_plan) and employee_count <= free_employee_limit %}
+
 <div class="pricing-hero card">
     <span class="section-tag">SMART PAYROLL SAAS</span>
 
-    {% if active_plan and active_plan.get("is_pro") %}
+    {% if has_paid_plan %}
         <h1>Your Yearly Plan is Active</h1>
         <p>
             Your workspace is currently on <b>{{ active_plan.get("plan", "PRO") }}</b>
@@ -22,7 +25,7 @@ Start free for up to {{ free_employee_limit }} employees. Choose a yearly plan w
         <h1>Start Free. Upgrade When You Grow.</h1>
         <p>
             Run payroll, manage attendance, generate payslips, export Excel reports,
-            and handle HR audit / Full & Final from one clean workspace.
+            and handle HR Audit and Full & Final from one clean workspace.
         </p>
     {% endif %}
 
@@ -37,7 +40,7 @@ Start free for up to {{ free_employee_limit }} employees. Choose a yearly plan w
     <div>
         <span class="section-tag">CURRENT WORKSPACE PLAN</span>
 
-        {% if active_plan and active_plan.get("is_pro") %}
+        {% if has_paid_plan %}
             <h2>{{ active_plan.get("plan", "YEARLY PLAN")|upper }} ACTIVE</h2>
             <p>
                 Status: {{ active_plan.get("status", "active")|title }}
@@ -48,30 +51,35 @@ Start free for up to {{ free_employee_limit }} employees. Choose a yearly plan w
             <h2>FREE PLAN</h2>
             <p>
                 Current employees: <b>{{ employee_count }}</b>.
-                Free plan allows up to <b>{{ free_employee_limit }}</b> employees with all features enabled.
+                Free Plan includes all payroll features for up to
+                <b>{{ free_employee_limit }}</b> employees.
+                {% if employee_count <= free_employee_limit %}
+                    You may also activate the <b>Yearly Starter</b> plan early at ₹9,999/year.
+                {% endif %}
                 {% if employee_count > free_employee_limit and recommended_plan %}
-                    Recommended: <b>{{ recommended_plan["name"] }}</b> at ₹{{ recommended_plan["price"] }}/year.
+                    Recommended: <b>{{ recommended_plan["name"] }}</b>
+                    at ₹{{ recommended_plan["price"] }}/year.
                 {% endif %}
             </p>
         {% endif %}
     </div>
 
     <a href="{{ url_for('payments') }}" class="secondary-btn">
-        View Payment History
+        View Payment History & Invoices
     </a>
 </div>
 
 <div class="pricing-info-banner card">
     <div>
-        <h2>Final Subscription Rule</h2>
+        <h2>Simple Subscription Rule</h2>
         <p>
             1–{{ free_employee_limit }} employees: all features free.
             Above {{ free_employee_limit }} employees: yearly subscription required.
-            Monthly plan is not available right now.
+            Monthly plans are not available.
         </p>
     </div>
 
-    {% if active_plan and active_plan.get("is_pro") %}
+    {% if has_paid_plan %}
         <span class="badge pro">YEARLY ACTIVE</span>
     {% else %}
         <span class="badge free">FREE PLAN</span>
@@ -79,11 +87,64 @@ Start free for up to {{ free_employee_limit }} employees. Choose a yearly plan w
 </div>
 
 <div class="pricing-grid">
+
+    <!-- FREE PLAN -->
+    <div class="card pricing-card free-pricing-card {% if free_plan_current %}active-pricing-card{% endif %}">
+        {% if free_plan_current %}
+        <div class="current-plan-ribbon">
+            Current Plan
+        </div>
+        {% endif %}
+
+        <div class="pricing-card-header">
+            <div>
+                <h2>Free</h2>
+                <p>1–{{ free_employee_limit }} Employees · No Expiry</p>
+            </div>
+
+            {% if free_plan_current %}
+                <span class="badge pro">Active</span>
+            {% else %}
+                <span class="badge free">Free</span>
+            {% endif %}
+        </div>
+
+        <div class="price-box">
+            <h1>₹0</h1>
+            <span>INR / Year</span>
+        </div>
+
+        <ul class="pricing-features">
+            <li>Up to {{ free_employee_limit }} employees</li>
+            <li>All payroll features included</li>
+            <li>Employee master upload</li>
+            <li>Attendance and leave management</li>
+            <li>Payroll calculation with PF / ESIC / PT / LWF</li>
+            <li>Professional PDF payslips</li>
+            <li>Bulk payslip ZIP download</li>
+            <li>Excel payroll export</li>
+            <li>HR Audit Report</li>
+            <li>Full & Final Excel/PDF</li>
+            <li>No credit card required</li>
+        </ul>
+
+        <button type="button" class="pricing-btn active-plan-btn" disabled>
+            {% if free_plan_current %}Current Plan{% else %}Included Free{% endif %}
+        </button>
+
+        <p class="pricing-note">
+            All features remain free while the workspace has up to
+            {{ free_employee_limit }} employees.
+        </p>
+    </div>
+
+    <!-- YEARLY PAID PLANS -->
     {% for key, plan in plans.items() %}
 
     {% set active_plan_name = active_plan.get("plan", "") if active_plan else "" %}
-    {% set is_active_plan = active_plan and active_plan.get("is_pro") and active_plan_name|lower == plan["name"]|lower %}
+    {% set is_active_plan = has_paid_plan and active_plan_name|lower == plan["name"]|lower %}
     {% set is_recommended = recommended_plan and recommended_plan["plan_id"] == plan["plan_id"] %}
+    {% set is_early_starter = (not has_paid_plan) and employee_count <= free_employee_limit and plan["plan_id"] == "yearly_6_25" %}
 
     <div class="card pricing-card {% if is_recommended %}popular-plan{% endif %} {% if is_active_plan %}active-pricing-card{% endif %}">
 
@@ -131,6 +192,7 @@ Start free for up to {{ free_employee_limit }} employees. Choose a yearly plan w
             <li>HR Audit Report</li>
             <li>Full & Final Excel/PDF</li>
             <li>Payment history and subscription tracking</li>
+            <li>Downloadable subscription invoice</li>
             <li>Priority support</li>
         </ul>
 
@@ -144,21 +206,27 @@ Start free for up to {{ free_employee_limit }} employees. Choose a yearly plan w
             >
                 {% if is_active_plan %}
                     Renew Current Plan
+                {% elif is_early_starter %}
+                    Activate Yearly Starter - ₹9,999
                 {% else %}
                     {{ plan["button_text"] }}
                 {% endif %}
             </button>
 
             <p class="pricing-note">
-                Payment is processed securely using Razorpay.
+                Choose the yearly plan suitable for your workforce.
+                Payment is processed securely using Razorpay and the invoice is generated automatically.
             </p>
         {% else %}
-            <button type="button" class="pricing-btn disabled-pricing-btn" disabled>
-                Payment Setup Pending
-            </button>
+            <a
+                href="mailto:info@smarthireai.in?subject=Payroll%20Pro%20Subscription%20Activation"
+                class="pricing-btn"
+            >
+                Contact Us to Activate
+            </a>
 
             <p class="pricing-note">
-                Add Razorpay live keys and set PAYMENTS_ENABLED=true to enable online payment.
+                Online payment will be available soon. Contact SmartHireAI for subscription activation.
             </p>
         {% endif %}
 
@@ -171,6 +239,12 @@ Start free for up to {{ free_employee_limit }} employees. Choose a yearly plan w
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
 <script>
+function restorePricingButton(button, fallbackText) {
+    if (!button) return;
+    button.disabled = false;
+    button.innerText = button.dataset.originalText || fallbackText || "Choose Plan";
+}
+
 function payNowFromButton(button) {
     const planId = button.dataset.planId;
     const planName = button.dataset.planName;
@@ -182,18 +256,27 @@ function payNowFromButton(button) {
 
     button.dataset.originalText = button.innerText;
     button.disabled = true;
-    button.innerText = "Creating order...";
+    button.innerText = "Creating secure order...";
 
-    fetch("/create-order", {
+    fetch("{{ url_for('create_order') }}", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ plan_id: planId })
+        body: JSON.stringify({plan_id: planId})
     })
-    .then(function (res) {
-        if (!res.ok) {
-            throw new Error("Order creation failed");
+    .then(async function (res) {
+        let payload = {};
+
+        try {
+            payload = await res.json();
+        } catch (error) {
+            payload = {};
         }
-        return res.json();
+
+        if (!res.ok) {
+            throw new Error(payload.message || "Order creation failed");
+        }
+
+        return payload;
     })
     .then(function (order) {
         if (!order.id) {
@@ -203,50 +286,51 @@ function payNowFromButton(button) {
         const options = {
             key: order.key_id || "{{ razorpay_key_id }}",
             amount: order.amount,
-            currency: "INR",
-            name: "SmartHire Payroll",
-            description: planName,
+            currency: order.currency || "INR",
+            name: "SmartHireAI Payroll Pro",
+            description: order.plan_name || planName,
             order_id: order.id,
 
             handler: function (response) {
+                button.innerText = "Verifying payment...";
+
                 const body =
                     "razorpay_payment_id=" + encodeURIComponent(response.razorpay_payment_id || "") +
                     "&razorpay_order_id=" + encodeURIComponent(response.razorpay_order_id || "") +
                     "&razorpay_signature=" + encodeURIComponent(response.razorpay_signature || "") +
                     "&plan_id=" + encodeURIComponent(planId);
 
-                fetch("/payment-success", {
+                fetch("{{ url_for('payment_success') }}", {
                     method: "POST",
                     headers: {"Content-Type": "application/x-www-form-urlencoded"},
                     body: body
                 })
-                .then(function (res) {
+                .then(async function (res) {
+                    const responseText = await res.text();
+
                     if (!res.ok) {
-                        throw new Error("Payment save failed");
+                        throw new Error(responseText || "Payment activation failed");
                     }
-                    return res.text();
+
+                    return responseText;
                 })
                 .then(function () {
-                    alert("Payment successful! " + planName + " activated.");
-                    window.location.href = "/";
+                    alert("Payment successful! Your yearly plan is active and the invoice is ready.");
+                    window.location.href = "{{ url_for('payments') }}";
                 })
                 .catch(function (err) {
-                    alert("Payment completed but activation failed. Please contact support.");
+                    alert(
+                        "Payment was completed, but automatic activation could not be confirmed. " +
+                        "Please contact support with your Razorpay payment ID."
+                    );
                     console.log(err);
-
-                    if (button) {
-                        button.disabled = false;
-                        button.innerText = "Try Again";
-                    }
+                    restorePricingButton(button, "Try Again");
                 });
             },
 
             modal: {
                 ondismiss: function () {
-                    if (button) {
-                        button.disabled = false;
-                        button.innerText = button.dataset.originalText || "Choose Plan";
-                    }
+                    restorePricingButton(button, "Choose Plan");
                 }
             },
 
@@ -254,16 +338,23 @@ function payNowFromButton(button) {
         };
 
         const rzp = new Razorpay(options);
+
+        rzp.on("payment.failed", function (response) {
+            const message =
+                response && response.error && response.error.description
+                    ? response.error.description
+                    : "Payment failed. Please try again.";
+
+            alert(message);
+            restorePricingButton(button, "Try Again");
+        });
+
         rzp.open();
     })
     .catch(function (err) {
-        alert("Payment order could not be created. Please contact support.");
+        alert(err.message || "Payment order could not be created. Please contact support.");
         console.log(err);
-
-        if (button) {
-            button.disabled = false;
-            button.innerText = button.dataset.originalText || "Choose Plan";
-        }
+        restorePricingButton(button, "Choose Plan");
     });
 }
 </script>

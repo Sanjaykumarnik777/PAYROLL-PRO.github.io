@@ -3,7 +3,7 @@
 {% block title %}Payments | SmartHire Payroll{% endblock %}
 
 {% block page_heading %}Payment History{% endblock %}
-{% block page_subheading %}Track subscription payments, Razorpay transactions and billing history.{% endblock %}
+{% block page_subheading %}Track subscription payments, Razorpay transactions, billing history and downloadable invoices.{% endblock %}
 
 {% block content %}
 
@@ -90,8 +90,9 @@
         {% else %}
             <h2>FREE PLAN</h2>
             <p>
-                You are currently using the free plan. Upgrade to PRO to unlock unlimited employees,
-                PDF payslips, Excel export, HR audit report and Full & Final reports.
+                You are currently using the Free Plan. All payroll features are available for up to
+                5 employees, including PDF payslips, Excel reports, HR Audit and Full & Final Settlement.
+                A yearly subscription is required only when the workforce exceeds 5 employees.
             </p>
         {% endif %}
     </div>
@@ -204,8 +205,11 @@
     {% else %}
         <div class="empty-state" style="padding: 30px 20px;">
             <div class="empty-icon">💎</div>
-            <h2>No active paid subscription</h2>
-            <p>You are currently using the free plan. Upgrade to unlock PRO features.</p>
+            <h2>Free Plan Active</h2>
+            <p>
+                All payroll features are included for up to 5 employees.
+                Choose a yearly plan when your workforce grows beyond the free limit.
+            </p>
 
             <a href="{{ url_for('pricing') }}" class="primary-link">
                 View Pricing
@@ -337,7 +341,8 @@
         </a>
     {% else %}
         <p>
-            Your Razorpay subscription payment records will appear here after a successful payment.
+            No payment is required while your workspace has up to 5 employees.
+            Yearly subscription payments and downloadable invoices will appear here after a successful payment.
         </p>
 
         <a href="{{ url_for('pricing') }}" class="primary-link">

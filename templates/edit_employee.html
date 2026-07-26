@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Employee | SmartHire Payroll{% endblock %}
+
+{% block page_heading %}Edit Employee{% endblock %}
+{% block page_subheading %}Update employee payroll, contact, statutory and bank details.{% endblock %}
+
+{% block content %}
+
+<style>
+    .edit-employee-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 320px;
+        gap: 22px;
+        align-items: start;
+    }
+
+    .edit-section {
+        margin-top: 24px;
+        padding-top: 20px;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .edit-section:first-of-type {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: 0;
+    }
+
+    .edit-section h3 {
+        margin: 0 0 16px;
+        color: #0f172a;
+        font-size: 17px;
+    }
+
+    .edit-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 17px;
+    }
+
+    .edit-form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+    }
+
+    .edit-form-group.full-row {
+        grid-column: 1 / -1;
+    }
+
+    .edit-form-group label {
+        color: #334155;
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    .edit-form-group input,
+    .edit-form-group select,
+    .edit-form-group textarea {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid #cbd5e1;
+        border-radius: 11px;
+        padding: 12px 13px;
+        background: #fff;
+        color: #0f172a;
+        font: inherit;
+    }
+
+    .edit-form-group input:focus,
+    .edit-form-group select:focus,
+    .edit-form-group textarea:focus {
+        outline: 0;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
+    .readonly-field {
+        background: #f1f5f9 !important;
+        color: #475569 !important;
+        cursor: not-allowed;
+    }
+
+    .field-help {
+        color: #64748b;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .edit-action-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 24px;
+    }
+
+    .save-employee-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+        padding: 11px 20px;
+        border: 0;
+        border-radius: 11px;
+        background: #2563eb;
+        color: #fff;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .save-employee-btn:hover {
+        background: #1d4ed8;
+    }
+
+    .employee-summary-panel h2 {
+        margin-top: 0;
+    }
+
+    .summary-item {
+        padding: 14px 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .summary-item:last-child {
+        border-bottom: 0;
+    }
+
+    .summary-item b {
+        display: block;
+        margin-bottom: 4px;
+        color: #0f172a;
+    }
+
+    .summary-item span {
+        color: #64748b;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    @media (max-width: 980px) {
+        .edit-employee-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 700px) {
+        .edit-form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .edit-form-group.full-row {
+            grid-column: auto;
+        }
+    }
+</style>
+
+<div class="edit-employee-layout">
+
+    <div class="card">
+        <span class="section-tag">EMPLOYEE MASTER</span>
+
+        <h2 style="margin-bottom:8px;">
+            Edit {{ employee['employee_name'] or employee['emp_code'] }}
+        </h2>
+
+        <p style="color:#64748b; margin-top:0;">
+            Update employee details carefully. Employee code cannot be changed.
+        </p>
+
+        <form method="POST">
+
+            <div class="edit-section">
+                <h3>Basic Employment Details</h3>
+
+                <div class="edit-form-grid">
+                    <div class="edit-form-group">
+                        <label>Employee Code</label>
+                        <input type="text" value="{{ employee['emp_code'] }}" class="readonly-field" readonly>
+                    </div>
+
+                    <div class="edit-form-group">
+                        <label>Employee Name *</label>
+                        <input type="text" name="employee_name" value="{{ employee['employee_name'] or '' }}" required>
+                    </div>
+
+                    <div class="edit-form-group">
+                        <label>Role / Designation *</label>
+                        <input type="text" name="role" value="{{ employee['role'] or '' }}" required>
+                    </div>
+
+                    <div class="edit-form-group">
+                        <label>Department</label>
+                        <input type="text" name="department" value="{{ employee['department'] or 'General' }}">
+                    </div>
+
+                    <div class="edit-form-group">
+                        <label>Gender</label>
+                        <select name="gender">
+                            <option value="male" {% if employee['gender'] == 'male' %}selected{% endif %}>Male</option>
+                            <option value="female" {% if employee['gender'] == 'female' %}selected{% endif %}>Female</option>
+                            <option value="other" {% if employee['gender'] == 'other' %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+
+                    <div class="edit-form-group">
+                        <label>Monthly Salary *</label>
+                        <input type="number" name="monthly_salary" min="0" step="0.01" value="{{ employee['monthly_salary'] or 0 }}" required>
+                    </div>
+
+                    <div class="edit-form-group">
+                        <label>Tax Regime</label>
+                        <select name="tax_regime">
+                            <option value="new" {% if employee['tax_regime'] != 'old' %}selected{% endif %}>New</option>
+                            <option value="old" {% if employee['tax_regime'] == 'old' %}selected{% endif %}>Old</option>
+                        </select>
+                    </div>
+
+                    <div class="edit-form-group">
+                        <label>Special Allowance</label>
+                        <input type="number" name="special_allowance" min="0" step="0.01" value="{{ employee['special_allowance'] or 0 }}">
+                    </div>
+
+                    <div class="edit-form-group">
+                        <label>Other Annual Deductions</label>
+                        <input type="number" name="other_annual_deductions" min="0" step="0.01" value="{{ employee['other_annual_deductions'] or 0 }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="edit-section">
+                <h3>Contact & Personal Details</h3>
+
+                <div class="edit-form-grid">
+                    <div class="edit-form-group">
+                        <label>Mobile No.</label>
+                        <input type="text" name="mobile_no" maxlength="12" inputmode="numeric" value="{{ employee['mobile_no'] or '' }}" placeholder="9876543210">
+                        <span class="field-help">Required for WhatsApp payslip sending.</span>
+                    </div>
+
+                    <div class="edit-form-group">
+                        <label>Email ID</label>
+                        <input type="email" name="email_id" value="{{ employee['email_id'] or '' }}" placeholder="employee@example.com">
+                    </div>
+
+                    <div class="edit-form-group">
+                        <label>Aadhaar No.</label>
+                        <input type="text" name="aadhaar_no" maxlength="12" inputmode="numeric" value="{{ employee['aadhaar_no'] or '' }}" placeholder="12-digit Aadhaar number">
+                    </div>
+
+                    <div class="edit-form-group">
+                        <label>PAN No.</label>
+                        <input type="text" name="pan_no" maxlength="10" value="{{ employee['pan_no'] or '' }}" placeholder="ABCDE1234F" style="text-transform:uppercase;">
+                    </div>
+
+                    <div class="edit-form-group full-row">
+                        <label>Residential Address</label>
+                        <textarea name="address" rows="4" maxlength="500" placeholder="Employee residential address">{{ employee['address'] or '' }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="edit-section">
+                <h3>Statutory Details</h3>
+
+                <div class="edit-form-grid">
+                    <div class="edit-form-group">
+                        <label>UAN No.</label>
+                        <input type="text" name="uan_no" value="{{ employee['uan_no'] or '' }}">
+                    </div>
+
+                    <div class="edit-form-group">
+                        <label>ESIC No.</label>
+                        <input type="text" name="esic_no" value="{{ employee['esic_no'] or '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="edit-section">
+                <h3>Bank Details</h3>
+
+                <div class="edit-form-grid">
+                    <div class="edit-form-group">
+                        <label>Bank Name</label>
+                        <input type="text" name="bank_name" value="{{ employee['bank_name'] or '' }}">
+                    </div>
+
+                    <div class="edit-form-group">
+                        <label>Account No.</label>
+                        <input type="text" name="account_no" value="{{ employee['account_no'] or '' }}">
+                    </div>
+
+                    <div class="edit-form-group">
+                        <label>IFSC Code</label>
+                        <input type="text" name="ifsc_code" value="{{ employee['ifsc_code'] or '' }}" style="text-transform:uppercase;">
+                    </div>
+                </div>
+            </div>
+
+            <div class="edit-action-row">
+                <button type="submit" class="save-employee-btn">Save Employee</button>
+                <a href="{{ url_for('employees_list') }}" class="secondary-btn">Cancel</a>
+            </div>
+
+        </form>
+    </div>
+
+    <div class="card employee-summary-panel">
+        <h2>Employee Update Guide</h2>
+
+        <div class="summary-item">
+            <b>WhatsApp Payslip</b>
+            <span>Save a valid 10-digit mobile number to make the employee eligible for WhatsApp payslip sending.</span>
+        </div>
+
+        <div class="summary-item">
+            <b>Data Privacy</b>
+            <span>Aadhaar and PAN remain masked on the Employee Master list.</span>
+        </div>
+
+        <div class="summary-item">
+            <b>Payroll Ready</b>
+            <span>Bank name, account number and IFSC are required for bank payment readiness.</span>
+        </div>
+
+        <div class="summary-item">
+            <b>Employee Code</b>
+            <span>Employee code is locked because it connects attendance, payroll history and leave records.</span>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

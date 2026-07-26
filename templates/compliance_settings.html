@@ -186,6 +186,39 @@
         opacity: 0.92;
     }
 
+    .compliance-last-updated {
+        display: inline-flex;
+        align-items: center;
+        margin-top: 6px;
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: #475569;
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .compliance-warning-box {
+        display: none;
+        padding: 12px 14px;
+        border: 1px solid #fecaca;
+        background: #fef2f2;
+        color: #991b1b;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.5;
+    }
+
+    .field-disabled {
+        opacity: 0.58;
+    }
+
+    .compliance-save-bar button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
     @media (max-width: 1200px) {
         .settings-grid,
         .compliance-preview-grid {
@@ -221,12 +254,29 @@
     <h1>Compliance & Payroll Policy</h1>
 
     <p>
-        Configure PF, ESIC, gratuity, TDS, salary days policy, paid days rules and annual festival bonus settings.
-        These rules are company-wise and will affect future payroll calculations.
+        Configure PF, ESIC, gratuity, TDS, salary-days policy,
+        paid-day rules and festival bonus settings company-wise.
+        These rules affect future payroll runs and Full &amp; Final
+        settlement calculations.
     </p>
+
+    {% if settings and settings['updated_at'] %}
+    <div class="compliance-last-updated">
+        Last updated: {{ settings['updated_at'] }}
+    </div>
+    {% endif %}
 </div>
 
-<form method="POST" action="{{ url_for('compliance_settings') }}" class="compliance-premium-form">
+<form
+    method="POST"
+    action="{{ url_for('compliance_settings') }}"
+    class="compliance-premium-form"
+    id="compliance_settings_form"
+>
+    <div
+        id="compliance_form_warning"
+        class="compliance-warning-box"
+    ></div>
 
     <!-- Payroll Policy Engine -->
     <div class="card compliance-section">
@@ -241,12 +291,21 @@
         <div class="settings-grid">
             <div class="form-group">
                 <label for="salary_days_policy">Salary Days Policy</label>
-                <select id="salary_days_policy" name="salary_days_policy">
-                    <option value="attendance" {% if settings and settings['salary_days_policy'] == 'attendance' %}selected{% endif %}>Attendance Working Days</option>
-                    <option value="fixed_26" {% if settings and settings['salary_days_policy'] == 'fixed_26' %}selected{% endif %}>Fixed 26 Days</option>
-                    <option value="fixed_30" {% if settings and settings['salary_days_policy'] == 'fixed_30' %}selected{% endif %}>Fixed 30 Days</option>
-                    <option value="calendar" {% if settings and settings['salary_days_policy'] == 'calendar' %}selected{% endif %}>Calendar Days</option>
-                    <option value="custom" {% if settings and settings['salary_days_policy'] == 'custom' %}selected{% endif %}>Custom Days</option>
+                <select
+                    id="salary_days_policy"
+                    name="salary_days_policy"
+                    required
+                >
+                    {% for policy_value, policy_label in salary_policy_options.items() %}
+                    <option
+                        value="{{ policy_value }}"
+                        {% if settings and settings['salary_days_policy'] == policy_value %}
+                        selected
+                        {% endif %}
+                    >
+                        {{ policy_label }}
+                    </option>
+                    {% endfor %}
                 </select>
                 <small class="field-help">Select how salary payable days should be calculated.</small>
             </div>
@@ -327,19 +386,20 @@
 
             <div class="form-group">
                 <label for="festival_bonus_month">Festival Bonus Payout Month</label>
-                <select id="festival_bonus_month" name="festival_bonus_month">
-                    <option value="1" {% if settings and settings['festival_bonus_month']|int == 1 %}selected{% endif %}>January</option>
-                    <option value="2" {% if settings and settings['festival_bonus_month']|int == 2 %}selected{% endif %}>February</option>
-                    <option value="3" {% if settings and settings['festival_bonus_month']|int == 3 %}selected{% endif %}>March</option>
-                    <option value="4" {% if settings and settings['festival_bonus_month']|int == 4 %}selected{% endif %}>April</option>
-                    <option value="5" {% if settings and settings['festival_bonus_month']|int == 5 %}selected{% endif %}>May</option>
-                    <option value="6" {% if settings and settings['festival_bonus_month']|int == 6 %}selected{% endif %}>June</option>
-                    <option value="7" {% if settings and settings['festival_bonus_month']|int == 7 %}selected{% endif %}>July</option>
-                    <option value="8" {% if settings and settings['festival_bonus_month']|int == 8 %}selected{% endif %}>August</option>
-                    <option value="9" {% if settings and settings['festival_bonus_month']|int == 9 %}selected{% endif %}>September</option>
-                    <option value="10" {% if settings and settings['festival_bonus_month']|int == 10 %}selected{% endif %}>October</option>
-                    <option value="11" {% if settings and settings['festival_bonus_month']|int == 11 %}selected{% endif %}>November</option>
-                    <option value="12" {% if settings and settings['festival_bonus_month']|int == 12 %}selected{% endif %}>December</option>
+                <select
+                    id="festival_bonus_month"
+                    name="festival_bonus_month"
+                >
+                    {% for month_number, month_name in month_choices %}
+                    <option
+                        value="{{ month_number }}"
+                        {% if settings and settings['festival_bonus_month']|int == month_number %}
+                        selected
+                        {% endif %}
+                    >
+                        {{ month_name }}
+                    </option>
+                    {% endfor %}
                 </select>
             </div>
 
@@ -579,8 +639,10 @@
         <div class="payroll-note-box">
             <b>Note</b>
             <span>
-                These settings are saved company-wise. Changes will apply to future payroll runs.
-                Already generated payroll records will not change automatically.
+                These settings are saved company-wise. Changes apply to
+                future payroll runs and future Full &amp; Final settlements.
+                Already generated payroll and settlement records will not
+                be recalculated automatically.
             </span>
         </div>
     </div>
@@ -592,7 +654,11 @@
             <p>These settings will affect future payroll calculations.</p>
         </div>
 
-        <button type="submit" onclick="return confirm('Save updated compliance and payroll policy settings?');">
+        <button
+            type="submit"
+            id="compliance_save_button"
+            onclick="return confirm('Save updated compliance and payroll policy settings?');"
+        >
             Save Settings
         </button>
     </div>
@@ -601,13 +667,13 @@
 
 <script>
     function getNumberValue(id, fallback) {
-        const el = document.getElementById(id);
+        const element = document.getElementById(id);
 
-        if (!el || el.value.trim() === "") {
+        if (!element || element.value.trim() === "") {
             return fallback || 0;
         }
 
-        const value = parseFloat(el.value);
+        const value = parseFloat(element.value);
 
         if (Number.isNaN(value)) {
             return fallback || 0;
@@ -617,13 +683,13 @@
     }
 
     function getSelectValue(id, fallback) {
-        const el = document.getElementById(id);
+        const element = document.getElementById(id);
 
-        if (!el) {
+        if (!element) {
             return fallback || "";
         }
 
-        return el.value || fallback || "";
+        return element.value || fallback || "";
     }
 
     function formatMoney(value) {
@@ -641,27 +707,211 @@
     }
 
     function setText(id, value) {
-        const el = document.getElementById(id);
+        const element = document.getElementById(id);
 
-        if (el) {
-            el.innerText = value;
+        if (element) {
+            element.innerText = value;
         }
     }
 
-    function updateCompliancePreview() {
-        const salaryPolicy = getSelectValue("salary_days_policy", "attendance");
+    function setFieldState(id, enabled) {
+        const element = document.getElementById(id);
 
-        const customSalaryDaysInput = document.getElementById("custom_salary_days");
-
-        if (customSalaryDaysInput) {
-            customSalaryDaysInput.disabled = salaryPolicy !== "custom";
-            customSalaryDaysInput.style.opacity = salaryPolicy === "custom" ? "1" : "0.65";
+        if (!element) {
+            return;
         }
 
-        const countWeeklyOff = getSelectValue("count_weekly_off_paid", "0") === "1";
-        const countPaidLeave = getSelectValue("count_paid_leave_paid", "0") === "1";
-        const countHoliday = getSelectValue("count_holiday_paid", "0") === "1";
-        const deductLop = getSelectValue("deduct_lop", "0") === "1";
+        element.disabled = !enabled;
+
+        const group = element.closest(".form-group");
+
+        if (group) {
+            group.classList.toggle("field-disabled", !enabled);
+        }
+    }
+
+    function showFormWarning(message) {
+        const warningBox = document.getElementById(
+            "compliance_form_warning"
+        );
+
+        const saveButton = document.getElementById(
+            "compliance_save_button"
+        );
+
+        if (!warningBox) {
+            return;
+        }
+
+        if (message) {
+            warningBox.innerText = message;
+            warningBox.style.display = "block";
+
+            if (saveButton) {
+                saveButton.disabled = true;
+            }
+        } else {
+            warningBox.innerText = "";
+            warningBox.style.display = "none";
+
+            if (saveButton) {
+                saveButton.disabled = false;
+            }
+        }
+    }
+
+    function validateComplianceForm() {
+        const errors = [];
+
+        const percentageFields = [
+            ["pf_employee_rate", "PF Employee Rate"],
+            ["pf_employer_rate", "PF Employer Rate"],
+            ["esic_employee_rate", "ESIC Employee Rate"],
+            ["esic_employer_rate", "ESIC Employer Rate"],
+            ["gratuity_rate", "Gratuity Rate"],
+            ["bonus_rate", "Bonus Rate"]
+        ];
+
+        percentageFields.forEach(function(field) {
+            const value = getNumberValue(field[0], 0);
+
+            if (value < 0 || value > 100) {
+                errors.push(
+                    field[1] + " must be between 0% and 100%."
+                );
+            }
+        });
+
+        const pfEmployeeRate = getNumberValue(
+            "pf_employee_rate",
+            0
+        );
+
+        const pfWageCeiling = getNumberValue(
+            "pf_wage_ceiling",
+            0
+        );
+
+        const pfMaxDeduction = getNumberValue(
+            "pf_max_deduction",
+            0
+        );
+
+        if (pfEmployeeRate > 0 && pfWageCeiling <= 0) {
+            errors.push(
+                "PF Wage Ceiling must be greater than 0."
+            );
+        }
+
+        if (pfEmployeeRate > 0 && pfMaxDeduction <= 0) {
+            errors.push(
+                "PF Max Deduction must be greater than 0."
+            );
+        }
+
+        const esicEmployeeRate = getNumberValue(
+            "esic_employee_rate",
+            0
+        );
+
+        const esicEmployerRate = getNumberValue(
+            "esic_employer_rate",
+            0
+        );
+
+        const esicWageLimit = getNumberValue(
+            "esic_wage_limit",
+            0
+        );
+
+        if (
+            (esicEmployeeRate > 0 || esicEmployerRate > 0)
+            && esicWageLimit <= 0
+        ) {
+            errors.push(
+                "ESIC Wage Limit must be greater than 0."
+            );
+        }
+
+        const salaryPolicy = getSelectValue(
+            "salary_days_policy",
+            "attendance"
+        );
+
+        if (salaryPolicy === "custom") {
+            const customDays = getNumberValue(
+                "custom_salary_days",
+                0
+            );
+
+            if (customDays <= 0 || customDays > 31) {
+                errors.push(
+                    "Custom Salary Days must be between 1 and 31."
+                );
+            }
+        }
+
+        const bonusMinServiceDays = getNumberValue(
+            "bonus_min_service_days",
+            0
+        );
+
+        if (
+            bonusMinServiceDays < 0
+            || bonusMinServiceDays > 3650
+        ) {
+            errors.push(
+                "Bonus Minimum Service Days must be between 0 and 3650."
+            );
+        }
+
+        showFormWarning(
+            errors.length > 0
+                ? errors.join(" ")
+                : ""
+        );
+
+        return errors.length === 0;
+    }
+
+    function updateCompliancePreview() {
+        const salaryPolicy = getSelectValue(
+            "salary_days_policy",
+            "attendance"
+        );
+
+        setFieldState(
+            "custom_salary_days",
+            salaryPolicy === "custom"
+        );
+
+        const countWeeklyOff = (
+            getSelectValue(
+                "count_weekly_off_paid",
+                "0"
+            ) === "1"
+        );
+
+        const countPaidLeave = (
+            getSelectValue(
+                "count_paid_leave_paid",
+                "0"
+            ) === "1"
+        );
+
+        const countHoliday = (
+            getSelectValue(
+                "count_holiday_paid",
+                "0"
+            ) === "1"
+        );
+
+        const deductLop = (
+            getSelectValue(
+                "deduct_lop",
+                "0"
+            ) === "1"
+        );
 
         let formula = "Paid Days = Present Days";
 
@@ -681,55 +931,165 @@
             formula += " - LOP Days";
         }
 
-        if (salaryPolicy === "fixed_26") {
-            formula += " | Salary Base: Fixed 26 Days";
-        } else if (salaryPolicy === "fixed_30") {
-            formula += " | Salary Base: Fixed 30 Days";
-        } else if (salaryPolicy === "calendar") {
-            formula += " | Salary Base: Calendar Days";
-        } else if (salaryPolicy === "custom") {
-            const customDays = getNumberValue("custom_salary_days", 30);
-            formula += " | Salary Base: Custom " + customDays + " Days";
-        } else {
-            formula += " | Salary Base: Attendance Working Days";
-        }
+        const policyLabels = {
+            attendance: "Attendance Working Days",
+            fixed_26: "Fixed 26 Days",
+            fixed_30: "Fixed 30 Days",
+            calendar: "Calendar Days",
+            custom: (
+                "Custom "
+                + getNumberValue(
+                    "custom_salary_days",
+                    30
+                )
+                + " Days"
+            )
+        };
 
-        setText("paid_days_formula_preview", formula);
+        formula += (
+            " | Salary Base: "
+            + (policyLabels[salaryPolicy] || "Attendance Working Days")
+        );
 
-        const festivalEnabled = getSelectValue("festival_bonus_enabled", "0") === "1";
-        const festivalMonthSelect = document.getElementById("festival_bonus_month");
+        setText(
+            "paid_days_formula_preview",
+            formula
+        );
+
+        const festivalEnabled = (
+            getSelectValue(
+                "festival_bonus_enabled",
+                "0"
+            ) === "1"
+        );
+
+        [
+            "festival_bonus_month",
+            "bonus_rate",
+            "bonus_min_service_days",
+            "bonus_prorata_enabled"
+        ].forEach(function(id) {
+            setFieldState(id, festivalEnabled);
+        });
+
+        const festivalMonthSelect = document.getElementById(
+            "festival_bonus_month"
+        );
+
         const festivalMonthText = festivalMonthSelect
-            ? festivalMonthSelect.options[festivalMonthSelect.selectedIndex].text
+            ? festivalMonthSelect.options[
+                festivalMonthSelect.selectedIndex
+            ].text
             : "October";
 
-        const bonusRate = getNumberValue("bonus_rate", 8.33);
-        const minServiceDays = getNumberValue("bonus_min_service_days", 30);
-        const prorata = getSelectValue("bonus_prorata_enabled", "1") === "1";
+        const bonusRate = getNumberValue(
+            "bonus_rate",
+            8.33
+        );
+
+        const minServiceDays = getNumberValue(
+            "bonus_min_service_days",
+            30
+        );
+
+        const prorata = (
+            getSelectValue(
+                "bonus_prorata_enabled",
+                "1"
+            ) === "1"
+        );
 
         let bonusText = "Festival bonus is disabled.";
 
         if (festivalEnabled) {
-            bonusText =
-                "Festival bonus enabled. Bonus rate " +
-                formatPercent(bonusRate) +
-                ", payout month " +
-                festivalMonthText +
-                ", minimum service " +
-                minServiceDays +
-                " days, prorata " +
-                (prorata ? "enabled." : "disabled.");
+            bonusText = (
+                "Festival bonus enabled. Bonus rate "
+                + formatPercent(bonusRate)
+                + ", payout month "
+                + festivalMonthText
+                + ", minimum service "
+                + minServiceDays
+                + " days, prorata "
+                + (prorata ? "enabled." : "disabled.")
+            );
         }
 
-        setText("bonus_policy_preview", bonusText);
+        setText(
+            "bonus_policy_preview",
+            bonusText
+        );
 
-        setText("preview_pf_ceiling", formatMoney(getNumberValue("pf_wage_ceiling", 15000)));
-        setText("preview_pf_employee", formatPercent(getNumberValue("pf_employee_rate", 12)));
-        setText("preview_pf_employer", formatPercent(getNumberValue("pf_employer_rate", 12)));
-        setText("preview_pf_max", formatMoney(getNumberValue("pf_max_deduction", 1800)));
+        setText(
+            "preview_pf_ceiling",
+            formatMoney(
+                getNumberValue(
+                    "pf_wage_ceiling",
+                    15000
+                )
+            )
+        );
 
-        setText("preview_esic_limit", formatMoney(getNumberValue("esic_wage_limit", 21000)));
-        setText("preview_esic_employee", formatPercent(getNumberValue("esic_employee_rate", 0.75)));
-        setText("preview_esic_employer", formatPercent(getNumberValue("esic_employer_rate", 3.25)));
+        setText(
+            "preview_pf_employee",
+            formatPercent(
+                getNumberValue(
+                    "pf_employee_rate",
+                    12
+                )
+            )
+        );
+
+        setText(
+            "preview_pf_employer",
+            formatPercent(
+                getNumberValue(
+                    "pf_employer_rate",
+                    12
+                )
+            )
+        );
+
+        setText(
+            "preview_pf_max",
+            formatMoney(
+                getNumberValue(
+                    "pf_max_deduction",
+                    1800
+                )
+            )
+        );
+
+        setText(
+            "preview_esic_limit",
+            formatMoney(
+                getNumberValue(
+                    "esic_wage_limit",
+                    21000
+                )
+            )
+        );
+
+        setText(
+            "preview_esic_employee",
+            formatPercent(
+                getNumberValue(
+                    "esic_employee_rate",
+                    0.75
+                )
+            )
+        );
+
+        setText(
+            "preview_esic_employer",
+            formatPercent(
+                getNumberValue(
+                    "esic_employer_rate",
+                    3.25
+                )
+            )
+        );
+
+        validateComplianceForm();
     }
 
     const complianceInputIds = [
@@ -756,13 +1116,41 @@
     ];
 
     complianceInputIds.forEach(function(id) {
-        const el = document.getElementById(id);
+        const element = document.getElementById(id);
 
-        if (el) {
-            el.addEventListener("input", updateCompliancePreview);
-            el.addEventListener("change", updateCompliancePreview);
+        if (!element) {
+            return;
         }
+
+        element.addEventListener(
+            "input",
+            updateCompliancePreview
+        );
+
+        element.addEventListener(
+            "change",
+            updateCompliancePreview
+        );
     });
+
+    const complianceForm = document.getElementById(
+        "compliance_settings_form"
+    );
+
+    if (complianceForm) {
+        complianceForm.addEventListener(
+            "submit",
+            function(event) {
+                if (!validateComplianceForm()) {
+                    event.preventDefault();
+                    window.scrollTo({
+                        top: 0,
+                        behavior: "smooth"
+                    });
+                }
+            }
+        );
+    }
 
     updateCompliancePreview();
 </script>
