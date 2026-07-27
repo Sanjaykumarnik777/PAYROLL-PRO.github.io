@@ -102,6 +102,13 @@
                 <span>Payments</span>
             </a>
 
+            {% if layout_is_super_admin %}
+            <a href="{{ url_for('admin_cheque_payments') }}"
+               class="{% if request.endpoint in ['admin_cheque_payments', 'update_cheque_payment_status', 'admin_download_cheque_invoice'] %}active{% endif %}">
+                <span>Cheque Payments</span>
+            </a>
+            {% endif %}
+
             <a href="{{ url_for('faq') }}" class="{% if request.endpoint == 'faq' %}active{% endif %}">
                 <span>FAQ</span>
             </a>

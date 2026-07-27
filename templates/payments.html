@@ -48,10 +48,20 @@
         <div>
             <span class="section-tag">BILLING & SUBSCRIPTIONS</span>
 
-            <h1>Payment History</h1>
+            <h1>
+                {% if is_super_admin_view %}
+                    All Client Payment History
+                {% else %}
+                    Payment History
+                {% endif %}
+            </h1>
 
             <p>
-                View Razorpay payments, subscription status, transaction history and billing records.
+                {% if is_super_admin_view %}
+                    View Razorpay and cheque payments received from all client companies.
+                {% else %}
+                    View Razorpay payments, subscription status, transaction history and billing records.
+                {% endif %}
             </p>
         </div>
 
@@ -225,7 +235,7 @@
     <div class="table-header">
         <div>
             <h2>Transactions</h2>
-            <p>Recent Razorpay payment activity and subscription billing.</p>
+            <p>Recent Razorpay and cheque payment activity with subscription billing.</p>
         </div>
 
         <span class="table-count">
@@ -240,7 +250,11 @@
 
             <thead>
                 <tr>
+                    {% if is_super_admin_view %}
+                    <th>Company</th>
+                    {% endif %}
                     <th>Amount</th>
+                    <th>Payment Mode</th>
                     <th>Invoice No</th>
                     <th>Payment ID</th>
                     <th>Order ID</th>
@@ -256,10 +270,25 @@
                 {% set payment_status = (row["status"] or "")|lower %}
                 <tr>
 
+                    {% if is_super_admin_view %}
+                    <td>
+                        <b>{{ row["company_name"] or "-" }}</b>
+                    </td>
+                    {% endif %}
+
                     <td>
                         <span class="salary-box">
                             ₹{{ row["amount"]|default(0)|round|int }}
                         </span>
+                    </td>
+
+                    <td>
+                        {% set payment_mode = (row["payment_mode"] or "Razorpay") %}
+                        {% if payment_mode|lower == "cheque" %}
+                            <span class="badge free">CHEQUE</span>
+                        {% else %}
+                            <span class="badge pro">{{ payment_mode|upper }}</span>
+                        {% endif %}
                     </td>
 
                     <td>
@@ -276,7 +305,12 @@
 
                     <td>
                         <div class="payment-id">
-                            {{ row["order_id"] or "-" }}
+                            {% set order_ref = (row["order_id"] or "")|trim %}
+                            {% if order_ref|lower in ["", "undefined", "none", "null"] %}
+                                -
+                            {% else %}
+                                {{ order_ref }}
+                            {% endif %}
                         </div>
                     </td>
 
@@ -291,7 +325,7 @@
                             </span>
                         {% else %}
                             <span class="badge free">
-                                {{ row["status"] or "FAILED" }}
+                                {{ (row["status"] or "FAILED")|upper }}
                             </span>
                         {% endif %}
                     </td>

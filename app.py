@@ -51,6 +51,17 @@ ADMIN_USERNAMES = [
     "smarthireai5"
 ]
 
+# Strict Super Admin list for private cheque-payment operations.
+# Override with: SUPER_ADMIN_USERNAMES=smarthireai5
+SUPER_ADMIN_USERNAMES = [
+    username.strip().lower()
+    for username in os.getenv(
+        "SUPER_ADMIN_USERNAMES",
+        ",".join(str(value) for value in ADMIN_USERNAMES)
+    ).split(",")
+    if username.strip()
+]
+
 DB_NAME = "payroll_pro.db"
 UPLOAD_FOLDER = "uploads"
 PAYSLIP_FOLDER = "payslips"
@@ -524,6 +535,48 @@ def add_payment_order_id_column():
 
 
 
+# ============================================================
+# PAYROLL PRO - SUPER ADMIN CHEQUE PAYMENT MODULE
+# ============================================================
+def ensure_cheque_payment_tables():
+    """Create cheque records without deleting existing data."""
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        safe_add_column(cur, "payments", "payment_mode", "TEXT DEFAULT 'Razorpay'")
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS cheque_payments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                company_id INTEGER NOT NULL,
+                user_id INTEGER,
+                plan_id TEXT NOT NULL,
+                plan_name TEXT NOT NULL,
+                amount REAL NOT NULL,
+                cheque_no TEXT NOT NULL,
+                bank_name TEXT NOT NULL,
+                cheque_date TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                notes TEXT DEFAULT '',
+                payment_id TEXT UNIQUE,
+                order_id TEXT,
+                invoice_id INTEGER,
+                created_by_user_id INTEGER NOT NULL,
+                processed_by_user_id INTEGER,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                processed_at TEXT,
+                FOREIGN KEY(company_id) REFERENCES companies(id),
+                FOREIGN KEY(user_id) REFERENCES users(id),
+                FOREIGN KEY(invoice_id) REFERENCES subscription_invoices(id)
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_cheque_company ON cheque_payments(company_id, id DESC)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_cheque_status ON cheque_payments(status, id DESC)")
+        conn.commit()
+    finally:
+        conn.close()
+
+
 # ---------------------------
 # SUBSCRIPTION INVOICE HELPERS
 # ---------------------------
@@ -761,16 +814,16 @@ def generate_subscription_invoice_pdf(invoice_id):
     c.drawRightString(right - 130, table_top - 96, "Grand Total:")
     c.drawRightString(right - 10, table_top - 96, f"Rs. {amount:,.2f}")
 
-    # Razorpay details
+    # Payment reference details
     y = table_top - 135
     c.setFont("Helvetica-Bold", 10)
     c.drawString(left, y, "Payment Details")
     y -= 16
 
     c.setFont("Helvetica", 9)
-    c.drawString(left, y, f"Razorpay Payment ID: {invoice_clean(invoice['payment_id'])}")
+    c.drawString(left, y, f"Payment Reference: {invoice_clean(invoice['payment_id'])}")
     y -= 13
-    c.drawString(left, y, f"Razorpay Order ID: {invoice_clean(invoice['order_id'])}")
+    c.drawString(left, y, f"Order / Transaction Reference: {invoice_clean(invoice['order_id'])}")
     y -= 13
     c.drawString(left, y, f"Subscription Start: {invoice_clean(invoice['subscription_start'])}")
     y -= 13
@@ -810,11 +863,14 @@ def create_subscription_invoice_record(
     payment_id,
     order_id,
     start_date,
-    end_date
+    end_date,
+    payment_mode="Razorpay",
+    invoice_datetime=None
 ):
+    invoice_time = invoice_datetime or start_date
     invoice_no = get_next_global_invoice_no()
-    invoice_date = start_date.strftime("%Y-%m-%d")
-    created_at = start_date.strftime("%Y-%m-%d %H:%M:%S")
+    invoice_date = invoice_time.strftime("%Y-%m-%d")
+    created_at = invoice_time.strftime("%Y-%m-%d %H:%M:%S")
 
     safe_invoice_no = "".join(ch if ch.isalnum() or ch in ["-", "_"] else "_" for ch in invoice_no)
     pdf_path = os.path.join(INVOICE_FOLDER, f"{safe_invoice_no}.pdf")
@@ -853,7 +909,7 @@ def create_subscription_invoice_record(
         amount,
         payment_id,
         order_id,
-        "Razorpay",
+        payment_mode,
         "PAID",
         invoice_date,
         start_date.strftime("%Y-%m-%d"),
@@ -922,6 +978,43 @@ def is_admin_user():
     ]
 
     return username in admin_usernames or username in owner_usernames
+
+
+def is_super_admin_user():
+    """Strict owner-only check for cheque-payment operations."""
+    user_id = session.get("user_id")
+    if not user_id:
+        return False
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT username FROM users WHERE id = ?", (user_id,))
+        user = cur.fetchone()
+    finally:
+        conn.close()
+    if not user:
+        return False
+    return str(user["username"] or "").strip().lower() in SUPER_ADMIN_USERNAMES
+
+
+def super_admin_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not session.get("user_id"):
+            return redirect(url_for("login"))
+        if not is_super_admin_user():
+            flash("This page is restricted to the SmartHireAI Super Admin.", "danger")
+            return redirect(url_for("dashboard"))
+        return fn(*args, **kwargs)
+    return wrapper
+
+
+@app.context_processor
+def inject_super_admin_layout_flag():
+    try:
+        return {"layout_is_super_admin": is_super_admin_user()}
+    except Exception:
+        return {"layout_is_super_admin": False}
 
 
 def create_error_report(row_errors, filename="upload_errors.xlsx"):
@@ -3367,6 +3460,275 @@ def payment_success():
         conn.close()
 
 
+# ============================================================
+# SUPER ADMIN - CHEQUE PAYMENTS
+# ============================================================
+@app.route("/admin/cheque-payments", methods=["GET", "POST"])
+@login_required
+@super_admin_required
+def admin_cheque_payments():
+    ensure_cheque_payment_tables()
+
+    if request.method == "POST":
+        try:
+            company_id = int(request.form.get("company_id", "").strip())
+        except (TypeError, ValueError):
+            company_id = 0
+
+        plan_id = request.form.get("plan_id", "").strip().lower()
+        cheque_no = re.sub(r"\s+", "", request.form.get("cheque_no", "").strip().upper())
+        bank_name = request.form.get("bank_name", "").strip()
+        cheque_date_text = request.form.get("cheque_date", "").strip()
+        notes = request.form.get("notes", "").strip()[:500]
+        selected_plan = get_subscription_plan(plan_id)
+
+        if not company_id:
+            flash("Please select a client company.", "danger")
+            return redirect(url_for("admin_cheque_payments"))
+        if not selected_plan:
+            flash("Please select a valid yearly plan.", "danger")
+            return redirect(url_for("admin_cheque_payments"))
+        if not re.fullmatch(r"[A-Z0-9/-]{3,30}", cheque_no):
+            flash("Cheque number must contain 3–30 letters, numbers, / or -.", "danger")
+            return redirect(url_for("admin_cheque_payments"))
+        if len(bank_name) < 2 or len(bank_name) > 100:
+            flash("Please enter a valid bank name.", "danger")
+            return redirect(url_for("admin_cheque_payments"))
+        try:
+            datetime.datetime.strptime(cheque_date_text, "%Y-%m-%d")
+        except ValueError:
+            flash("Please enter a valid cheque date.", "danger")
+            return redirect(url_for("admin_cheque_payments"))
+
+        amount = float(selected_plan["price"])
+        plan_name = str(selected_plan["name"])
+        now_text = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        created_by = int(session.get("user_id") or 0)
+        conn = get_db()
+        cur = conn.cursor()
+        try:
+            cur.execute("SELECT id FROM companies WHERE id = ?", (company_id,))
+            if not cur.fetchone():
+                flash("Selected client company was not found.", "danger")
+                return redirect(url_for("admin_cheque_payments"))
+
+            cur.execute("SELECT id FROM users WHERE company_id = ? ORDER BY id LIMIT 1", (company_id,))
+            company_user = cur.fetchone()
+            company_user_id = company_user["id"] if company_user else None
+
+            cur.execute("""
+                SELECT id FROM cheque_payments
+                WHERE UPPER(TRIM(bank_name)) = UPPER(TRIM(?))
+                  AND UPPER(TRIM(cheque_no)) = UPPER(TRIM(?))
+                LIMIT 1
+            """, (bank_name, cheque_no))
+            if cur.fetchone():
+                flash("This bank and cheque number is already recorded.", "danger")
+                return redirect(url_for("admin_cheque_payments"))
+
+            cur.execute("""
+                INSERT INTO cheque_payments (
+                    company_id,user_id,plan_id,plan_name,amount,cheque_no,bank_name,
+                    cheque_date,status,notes,created_by_user_id,created_at,updated_at
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """, (company_id,company_user_id,plan_id,plan_name,amount,cheque_no,bank_name,
+                  cheque_date_text,"pending",notes,created_by,now_text,now_text))
+            cheque_id = cur.lastrowid
+            payment_id = f"CHEQUE-{cheque_id:06d}"
+            ref = re.sub(r"[^A-Z0-9]+", "-", f"{bank_name}-{cheque_no}".upper()).strip("-")[:60]
+            order_id = f"CHEQUE-{ref}"
+
+            cur.execute("UPDATE cheque_payments SET payment_id=?,order_id=?,updated_at=? WHERE id=?",
+                        (payment_id,order_id,now_text,cheque_id))
+            cur.execute("""
+                INSERT INTO payments (
+                    company_id,user_id,amount,payment_id,order_id,status,payment_mode,created_at
+                ) VALUES (?,?,?,?,?,?,?,?)
+            """, (company_id,company_user_id,amount,payment_id,order_id,"pending","Cheque",now_text))
+            conn.commit()
+        except Exception as error:
+            conn.rollback()
+            print("Cheque payment creation failed:", error)
+            flash("Cheque record could not be saved.", "danger")
+            return redirect(url_for("admin_cheque_payments"))
+        finally:
+            conn.close()
+
+        flash("Cheque recorded as Pending. No subscription or invoice has been activated.", "success")
+        return redirect(url_for("admin_cheque_payments"))
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT c.id,c.company_name,COALESCE(c.email,'') AS email,COALESCE(c.phone,'') AS phone,
+            (SELECT u.username FROM users u WHERE u.company_id=c.id ORDER BY u.id LIMIT 1) AS login_username
+            FROM companies c ORDER BY LOWER(c.company_name),c.id
+        """)
+        companies = cur.fetchall()
+        cur.execute("""
+            SELECT cp.*,c.company_name,u.username AS client_username,si.invoice_no
+            FROM cheque_payments cp
+            JOIN companies c ON c.id=cp.company_id
+            LEFT JOIN users u ON u.id=cp.user_id
+            LEFT JOIN subscription_invoices si ON si.id=cp.invoice_id
+            ORDER BY cp.id DESC
+        """)
+        records = cur.fetchall()
+    finally:
+        conn.close()
+
+    return render_template("admin_cheque_payments.html", companies=companies,
+        cheque_records=records, pricing_plans=list(get_subscription_pricing_plans().values()),
+        today=datetime.datetime.now().strftime("%Y-%m-%d"))
+
+
+@app.route("/admin/cheque-payments/<int:cheque_payment_id>/status", methods=["POST"])
+@login_required
+@super_admin_required
+def update_cheque_payment_status(cheque_payment_id):
+    ensure_cheque_payment_tables()
+    action = request.form.get("action", "").strip().lower()
+    if action not in ["cleared", "bounced"]:
+        flash("Invalid cheque action.", "danger")
+        return redirect(url_for("admin_cheque_payments"))
+
+    processed_by = int(session.get("user_id") or 0)
+    payment_time = datetime.datetime.now()
+    now_text = payment_time.strftime("%Y-%m-%d %H:%M:%S")
+    invoice_id = None
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("SELECT * FROM cheque_payments WHERE id=?", (cheque_payment_id,))
+        cheque = cur.fetchone()
+        if not cheque:
+            flash("Cheque record not found.", "danger")
+            return redirect(url_for("admin_cheque_payments"))
+        status = str(cheque["status"] or "").lower()
+        if status != "pending":
+            flash(f"Cheque is already marked as {status.title()}.", "warning")
+            return redirect(url_for("admin_cheque_payments"))
+
+        if action == "bounced":
+            cur.execute("""
+                UPDATE cheque_payments SET status='bounced',processed_by_user_id=?,processed_at=?,updated_at=?
+                WHERE id=? AND status='pending'
+            """, (processed_by,now_text,now_text,cheque_payment_id))
+            cur.execute("UPDATE payments SET status='bounced',payment_mode='Cheque' WHERE payment_id=?",
+                        (cheque["payment_id"],))
+            conn.commit()
+            flash("Cheque marked as Bounced. Subscription and invoice were not created.", "warning")
+            return redirect(url_for("admin_cheque_payments"))
+
+        cheque_date = datetime.datetime.strptime(cheque["cheque_date"], "%Y-%m-%d").date()
+        if cheque_date > payment_time.date():
+            flash("A post-dated cheque cannot be cleared before its cheque date.", "danger")
+            return redirect(url_for("admin_cheque_payments"))
+
+        selected_plan = get_subscription_plan(cheque["plan_id"])
+        if not selected_plan:
+            flash("The selected yearly plan no longer exists.", "danger")
+            return redirect(url_for("admin_cheque_payments"))
+
+        company_id = int(cheque["company_id"])
+        user_id = cheque["user_id"]
+        amount = float(cheque["amount"] or selected_plan["price"])
+        plan_name = str(cheque["plan_name"] or selected_plan["name"])
+        duration_days = int(selected_plan["duration_days"])
+        subscription_start = payment_time
+
+        cur.execute("""
+            SELECT end_date FROM subscriptions
+            WHERE company_id=? AND LOWER(COALESCE(status,''))='active'
+              AND end_date IS NOT NULL AND TRIM(end_date)!=''
+            ORDER BY date(end_date) DESC,id DESC LIMIT 1
+        """, (company_id,))
+        current = cur.fetchone()
+        if current and current["end_date"]:
+            try:
+                current_end = datetime.datetime.strptime(current["end_date"], "%Y-%m-%d").date()
+                if current_end >= payment_time.date():
+                    next_date = current_end + datetime.timedelta(days=1)
+                    subscription_start = datetime.datetime.combine(next_date, payment_time.time().replace(microsecond=0))
+            except (TypeError, ValueError):
+                subscription_start = payment_time
+        subscription_end = subscription_start + datetime.timedelta(days=duration_days)
+
+        cur.execute("UPDATE subscriptions SET status='inactive' WHERE company_id=? AND status='active'", (company_id,))
+        cur.execute("""
+            INSERT INTO subscriptions (company_id,plan_name,status,start_date,end_date)
+            VALUES (?,?,?,?,?)
+        """, (company_id,plan_name,"active",subscription_start.strftime("%Y-%m-%d"),subscription_end.strftime("%Y-%m-%d")))
+
+        cur.execute("""
+            UPDATE payments SET user_id=?,amount=?,order_id=?,status='success',payment_mode='Cheque'
+            WHERE payment_id=?
+        """, (user_id,amount,cheque["order_id"],cheque["payment_id"]))
+        if cur.rowcount == 0:
+            cur.execute("""
+                INSERT INTO payments (company_id,user_id,amount,payment_id,order_id,status,payment_mode,created_at)
+                VALUES (?,?,?,?,?,?,?,?)
+            """, (company_id,user_id,amount,cheque["payment_id"],cheque["order_id"],"success","Cheque",now_text))
+
+        invoice_id = create_subscription_invoice_record(
+            cur=cur, company_id=company_id, user_id=user_id, plan_id=cheque["plan_id"],
+            plan_name=plan_name, amount=amount, payment_id=cheque["payment_id"],
+            order_id=cheque["order_id"], start_date=subscription_start,
+            end_date=subscription_end, payment_mode="Cheque", invoice_datetime=payment_time)
+
+        cur.execute("""
+            UPDATE cheque_payments SET status='cleared',invoice_id=?,processed_by_user_id=?,
+                processed_at=?,updated_at=? WHERE id=? AND status='pending'
+        """, (invoice_id,processed_by,now_text,now_text,cheque_payment_id))
+        if cur.rowcount != 1:
+            raise RuntimeError("Cheque status changed before processing completed")
+        conn.commit()
+    except Exception as error:
+        conn.rollback()
+        print("Cheque clearing failed:", error)
+        flash("Cheque could not be cleared. No partial subscription was saved.", "danger")
+        return redirect(url_for("admin_cheque_payments"))
+    finally:
+        conn.close()
+
+    try:
+        generate_subscription_invoice_pdf(invoice_id)
+    except Exception as error:
+        print("Cheque invoice PDF generation failed:", error)
+    flash("Cheque cleared successfully. Subscription is active and invoice is ready.", "success")
+    return redirect(url_for("admin_cheque_payments"))
+
+
+@app.route("/admin/cheque-payments/<int:cheque_payment_id>/invoice")
+@login_required
+@super_admin_required
+def admin_download_cheque_invoice(cheque_payment_id):
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+            SELECT cp.invoice_id,si.invoice_no,si.pdf_path
+            FROM cheque_payments cp LEFT JOIN subscription_invoices si ON si.id=cp.invoice_id
+            WHERE cp.id=? AND cp.status='cleared'
+        """, (cheque_payment_id,))
+        invoice = cur.fetchone()
+    finally:
+        conn.close()
+    if not invoice or not invoice["invoice_id"]:
+        flash("Cleared cheque invoice was not found.", "danger")
+        return redirect(url_for("admin_cheque_payments"))
+    pdf_path = invoice["pdf_path"]
+    if not pdf_path or not os.path.exists(pdf_path):
+        try:
+            pdf_path = generate_subscription_invoice_pdf(invoice["invoice_id"])
+        except Exception as error:
+            flash(f"Invoice PDF could not be generated: {str(error)}", "danger")
+            return redirect(url_for("admin_cheque_payments"))
+    invoice_no = invoice_clean(invoice["invoice_no"], f"invoice_{invoice['invoice_id']}")
+    return send_file(pdf_path, as_attachment=True, download_name=f"{invoice_no}.pdf")
+
+
 @app.route("/payments")
 @login_required
 def payments():
@@ -3376,27 +3738,43 @@ def payments():
         flash("Company not found. Please login again.", "danger")
         return redirect(url_for("login"))
 
+    is_super_admin_view = is_super_admin_user()
+
     conn = get_db()
     cur = conn.cursor()
 
-    cur.execute("""
+    base_query = """
         SELECT
             p.id,
+            p.company_id,
             p.amount,
             p.payment_id,
             p.order_id,
+            p.payment_mode,
             p.status,
             p.created_at,
+            c.company_name,
             si.id AS invoice_id,
             si.invoice_no,
             si.status AS invoice_status
         FROM payments p
+        JOIN companies c
+          ON c.id = p.company_id
         LEFT JOIN subscription_invoices si
-            ON si.company_id = p.company_id
-           AND si.payment_id = p.payment_id
-        WHERE p.company_id = ?
-        ORDER BY p.id DESC
-    """, (company_id,))
+          ON si.company_id = p.company_id
+         AND si.payment_id = p.payment_id
+    """
+
+    if is_super_admin_view:
+        cur.execute(base_query + " ORDER BY p.id DESC")
+    else:
+        cur.execute(
+            base_query + """
+                WHERE p.company_id = ?
+                ORDER BY p.id DESC
+            """,
+            (company_id,)
+        )
 
     data = cur.fetchall()
 
@@ -3449,7 +3827,8 @@ def payments():
         failed_payments=failed_payments,
         active_plan=active_plan,
         active_subscription=active_subscription,
-        campaign_free_mode=is_campaign_free_mode()
+        campaign_free_mode=is_campaign_free_mode(),
+        is_super_admin_view=is_super_admin_view
     )
 
 
@@ -3466,12 +3845,19 @@ def download_invoice(invoice_id):
     conn = get_db()
     cur = conn.cursor()
 
-    cur.execute("""
-        SELECT id, invoice_no, pdf_path
-        FROM subscription_invoices
-        WHERE id = ?
-          AND company_id = ?
-    """, (invoice_id, company_id))
+    if is_super_admin_user():
+        cur.execute("""
+            SELECT id, invoice_no, pdf_path
+            FROM subscription_invoices
+            WHERE id = ?
+        """, (invoice_id,))
+    else:
+        cur.execute("""
+            SELECT id, invoice_no, pdf_path
+            FROM subscription_invoices
+            WHERE id = ?
+              AND company_id = ?
+        """, (invoice_id, company_id))
 
     invoice = cur.fetchone()
     conn.close()
@@ -14623,6 +15009,7 @@ def setup_database():
     ensure_leave_tables()
     add_leave_payroll_columns()
     add_payment_order_id_column()
+    ensure_cheque_payment_tables()
 
 
 # Render / Gunicorn ke liye database setup

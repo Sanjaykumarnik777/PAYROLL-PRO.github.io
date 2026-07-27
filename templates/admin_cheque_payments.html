@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Cheque Payments | SmartHire Payroll{% endblock %}
+{% block page_heading %}Super Admin Cheque Payments{% endblock %}
+{% block page_subheading %}Record, verify and clear account-payee cheques received through SmartHireAI official channels.{% endblock %}
+
+{% block content %}
+<style>
+.cheque-warning{border:1px solid #f59e0b;background:#fffbeb}.cheque-warning h2{color:#92400e}
+.cheque-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.cheque-grid .full-width{grid-column:1/-1}
+.cheque-field label{display:block;margin-bottom:7px;font-weight:800}.cheque-field input,.cheque-field select,.cheque-field textarea{width:100%;box-sizing:border-box;padding:12px 13px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;font:inherit}.cheque-field textarea{min-height:90px;resize:vertical}
+.cheque-actions{display:flex;flex-wrap:wrap;gap:8px}.cheque-actions form{display:inline;margin:0}.cheque-btn{border:0;border-radius:9px;padding:9px 12px;font-weight:800;cursor:pointer}.cheque-btn.clear{background:#dcfce7;color:#166534}.cheque-btn.bounce{background:#fee2e2;color:#991b1b}
+.cheque-status{display:inline-flex;align-items:center;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:900}.cheque-status.pending{background:#fef3c7;color:#92400e}.cheque-status.cleared{background:#dcfce7;color:#166534}.cheque-status.bounced{background:#fee2e2;color:#991b1b}.muted-note{color:#64748b;font-size:13px;line-height:1.55}
+@media(max-width:800px){.cheque-grid{grid-template-columns:1fr}.cheque-grid .full-width{grid-column:auto}}
+</style>
+
+<div class="card cheque-warning">
+  <span class="section-tag">OWNER-ONLY CONTROL</span>
+  <h2>Cheque payments require bank clearance</h2>
+  <p>A new cheque is saved as <b>Pending</b>. It appears in the client’s Payment History, but no invoice or paid subscription is created. Only after the cheque clears should the Super Admin use <b>Mark Cleared</b>. Cash, manual UPI and manual bank-transfer entries are intentionally not available here.</p>
+</div>
+
+<div class="card">
+  <div class="table-header"><div><span class="section-tag">NEW CHEQUE</span><h2>Record Account-Payee Cheque</h2><p>The amount is taken from the selected yearly plan and cannot be edited manually.</p></div></div>
+  <form method="POST" action="{{ url_for('admin_cheque_payments') }}">
+    <div class="cheque-grid">
+      <div class="cheque-field"><label for="company_id">Client Company</label><select id="company_id" name="company_id" required><option value="">Select client company</option>{% for company in companies %}<option value="{{ company['id'] }}">{{ company['company_name'] }}{% if company['login_username'] %} · {{ company['login_username'] }}{% endif %}</option>{% endfor %}</select></div>
+      <div class="cheque-field"><label for="plan_id">Yearly Plan</label><select id="plan_id" name="plan_id" required><option value="">Select yearly plan</option>{% for plan in pricing_plans %}<option value="{{ plan['plan_id'] }}" data-price="{{ plan['price'] }}">{{ plan['name'] }} · ₹{{ plan['price'] }}</option>{% endfor %}</select><p class="muted-note" id="planAmount">Plan amount will appear here.</p></div>
+      <div class="cheque-field"><label for="cheque_no">Cheque Number</label><input id="cheque_no" name="cheque_no" maxlength="30" placeholder="Example: 123456" required></div>
+      <div class="cheque-field"><label for="bank_name">Bank Name</label><input id="bank_name" name="bank_name" maxlength="100" placeholder="Example: State Bank of India" required></div>
+      <div class="cheque-field"><label for="cheque_date">Cheque Date</label><input id="cheque_date" name="cheque_date" type="date" value="{{ today }}" required></div>
+      <div class="cheque-field"><label>Status on Entry</label><input value="Pending Verification" readonly></div>
+      <div class="cheque-field full-width"><label for="notes">Internal Note</label><textarea id="notes" name="notes" maxlength="500" placeholder="Optional: cheque received from, courier details, deposit note, etc."></textarea></div>
+    </div>
+    <div style="margin-top:18px"><button type="submit" class="primary-link" style="border:0;cursor:pointer">Save Pending Cheque</button></div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="table-header"><div><span class="section-tag">CHEQUE REGISTER</span><h2>Cheque Verification History</h2><p>Only pending cheques can be marked Cleared or Bounced.</p></div><span class="table-count">{{ cheque_records|length }} Records</span></div>
+  {% if cheque_records %}
+  <p class="table-scroll-hint">Swipe left to view complete cheque details →</p>
+  <div class="table-wrapper"><table><thead><tr><th>Company</th><th>Plan</th><th>Amount</th><th>Cheque No</th><th>Bank</th><th>Cheque Date</th><th>Status</th><th>Payment Ref</th><th>Invoice</th><th>Created</th><th>Action</th></tr></thead><tbody>
+  {% for row in cheque_records %}{% set cheque_status=(row['status'] or 'pending')|lower %}<tr>
+    <td><b>{{ row['company_name'] }}</b>{% if row['client_username'] %}<div class="muted-note">{{ row['client_username'] }}</div>{% endif %}</td><td>{{ row['plan_name'] }}</td><td><span class="salary-box">₹{{ row['amount']|round|int }}</span></td><td>{{ row['cheque_no'] }}</td><td>{{ row['bank_name'] }}</td><td>{{ row['cheque_date'] }}</td><td><span class="cheque-status {{ cheque_status }}">{{ cheque_status|upper }}</span></td><td>{{ row['payment_id'] or '-' }}</td>
+    <td>{% if row['invoice_id'] %}<a href="{{ url_for('admin_download_cheque_invoice', cheque_payment_id=row['id']) }}" class="secondary-btn">{{ row['invoice_no'] or 'Download' }}</a>{% else %}-{% endif %}</td><td>{{ row['created_at'] }}</td>
+    <td>{% if cheque_status=='pending' %}<div class="cheque-actions"><form method="POST" action="{{ url_for('update_cheque_payment_status', cheque_payment_id=row['id']) }}" onsubmit="return confirm('Confirm that this cheque has cleared in the official bank account?');"><input type="hidden" name="action" value="cleared"><button type="submit" class="cheque-btn clear">Mark Cleared</button></form><form method="POST" action="{{ url_for('update_cheque_payment_status', cheque_payment_id=row['id']) }}" onsubmit="return confirm('Mark this cheque as bounced?');"><input type="hidden" name="action" value="bounced"><button type="submit" class="cheque-btn bounce">Mark Bounced</button></form></div>{% else %}Processed{% endif %}</td>
+  </tr>{% endfor %}</tbody></table></div>
+  {% else %}<div class="empty-state"><div class="empty-icon">🧾</div><h2>No cheque records yet</h2><p>The first cheque entry will appear here after it is saved.</p></div>{% endif %}
+</div>
+
+<script>(function(){const s=document.getElementById('plan_id'),a=document.getElementById('planAmount');function u(){const o=s.options[s.selectedIndex],p=o?o.dataset.price:'';a.textContent=p?'Official cheque amount: ₹'+Number(p).toLocaleString('en-IN'):'Plan amount will appear here.'}s.addEventListener('change',u);u()})();</script>
+{% endblock %}
