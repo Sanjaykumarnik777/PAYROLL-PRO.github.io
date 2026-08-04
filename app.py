@@ -21,6 +21,9 @@ from werkzeug.utils import secure_filename
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
 from reportlab.lib.pagesizes import A4, letter
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "").strip()
@@ -73,6 +76,14 @@ COMPANY_ASSET_FOLDER = os.path.join(UPLOAD_FOLDER, "company_assets")
 # taaki Payroll Pro aur CMPF dono same invoice sequence use karein.
 COMMON_INVOICE_DB = os.getenv("COMMON_INVOICE_DB", "invoice_counter.db")
 INVOICE_PREFIX = os.getenv("INVOICE_PREFIX", "INV")
+
+# =========================
+# WHATSAPP CLOUD API CONFIG
+# =========================
+WHATSAPP_VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "").strip()
+
+if not WHATSAPP_VERIFY_TOKEN:
+    print("WARNING: WHATSAPP_VERIFY_TOKEN environment variable is not configured.")
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(PAYSLIP_FOLDER, exist_ok=True)
@@ -1332,6 +1343,34 @@ def is_campaign_free_mode():
     Later, turn this OFF from Render environment variable.
     """
     return os.environ.get("CAMPAIGN_FREE_MODE", "off").lower() == "on"
+
+
+# =========================
+# WHATSAPP WEBHOOK
+# =========================
+@app.route("/webhook", methods=["GET"])
+def whatsapp_webhook_verify():
+    mode = request.args.get("hub.mode", "")
+    verify_token = request.args.get("hub.verify_token", "")
+    challenge = request.args.get("hub.challenge", "")
+
+    if mode == "subscribe" and verify_token == WHATSAPP_VERIFY_TOKEN:
+        print("WhatsApp webhook verified successfully.")
+        return challenge, 200
+
+    print("WhatsApp webhook verification failed.")
+    return "Verification failed", 403
+
+
+@app.route("/webhook", methods=["POST"])
+def whatsapp_webhook_receive():
+    payload = request.get_json(silent=True) or {}
+
+    print("WhatsApp webhook event received:")
+    print(payload)
+
+    return jsonify({"status": "received"}), 200
+
 
 @app.context_processor
 def inject_layout_plan():
