@@ -14197,7 +14197,7 @@ def get_whatsapp_cloud_config():
         ).strip().lower(),
         "template_name": os.getenv(
             "WHATSAPP_TEMPLATE_NAME",
-            "salary_payslip_document"
+            "monthly_payslip"
         ).strip(),
         "template_language": os.getenv(
             "WHATSAPP_TEMPLATE_LANGUAGE",
@@ -14381,10 +14381,13 @@ def send_whatsapp_pdf_template(
     Send an approved utility template containing a PDF document header.
 
     Expected approved template:
-    Name: salary_payslip_document
+    Name: monthly_payslip
     Category: Utility
     Header: Document
-    Body: Dear {{1}}, your salary payslip for {{2}} from {{3}} is attached.
+    Body variables:
+    {{1}} Employee Name
+    {{2}} Payroll Month
+    {{3}} Company Name
     """
     config = get_whatsapp_cloud_config()
     whatsapp_number = clean_whatsapp_number_for_send(mobile_no)

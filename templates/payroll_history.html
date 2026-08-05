@@ -700,7 +700,25 @@
 
                 {% set mobile = (row['employee_mobile_no'] or '')|string|trim %}
                 {% set email = (row['employee_email_id'] or '')|string|trim %}
-                {% set whatsapp_ready = mobile|length == 10 %}
+                {% set mobile_digits = mobile
+                    |replace(' ', '')
+                    |replace('+', '')
+                    |replace('-', '')
+                    |replace('(', '')
+                    |replace(')', '')
+                %}
+
+                {% set whatsapp_ready =
+                    mobile_digits|length == 10
+                    or (
+                        mobile_digits|length == 12
+                        and mobile_digits[:2] == '91'
+                    )
+                    or (
+                        mobile_digits|length == 11
+                        and mobile_digits[:1] == '0'
+                    )
+                %}
                 {% set send_status = (row['whatsapp_send_status'] or '')|string|trim %}
 
                 <tr>
