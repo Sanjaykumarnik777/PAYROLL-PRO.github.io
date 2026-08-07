@@ -273,6 +273,30 @@
                         <label>ESIC No.</label>
                         <input type="text" name="esic_no" value="{{ employee['esic_no'] or '' }}">
                     </div>
+
+                    <div class="edit-form-group">
+    <label>PF Applicable</label>
+
+    <select name="pf_applicable">
+        <option value="1"
+            {% if employee['pf_applicable']|default(1)|int == 1 %}
+            selected
+            {% endif %}>
+            Yes (PF Employee)
+        </option>
+
+        <option value="0"
+            {% if employee['pf_applicable']|default(1)|int == 0 %}
+            selected
+            {% endif %}>
+            No (Non-PF Employee)
+        </option>
+    </select>
+
+    <span class="field-help">
+        Select <b>No</b> for employees who are not covered under EPF.
+    </span>
+</div>
                 </div>
             </div>
 

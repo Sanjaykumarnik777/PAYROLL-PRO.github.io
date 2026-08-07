@@ -250,6 +250,7 @@ def init_db():
     # Extra employee details for payslip
     safe_add_column(cur, "employees", "uan_no", "TEXT DEFAULT ''")
     safe_add_column(cur, "employees", "esic_no", "TEXT DEFAULT ''")
+    safe_add_column(cur, "employees", "pf_applicable", "INTEGER DEFAULT 1")
     safe_add_column(cur, "employees", "bank_name", "TEXT DEFAULT ''")
     safe_add_column(cur, "employees", "account_no", "TEXT DEFAULT ''")
     safe_add_column(cur, "employees", "ifsc_code", "TEXT DEFAULT ''")
@@ -4451,6 +4452,19 @@ def upload_employees():
                 esic_no = clean_employee_text_value(
                     row.get("esic_no")
                 )
+                pf_applicable = clean_text(
+                    row.get("pf_applicable"),
+                    "yes"
+                ).lower()
+
+                pf_applicable = 0 if pf_applicable in [
+                    "no",
+                    "n",
+                    "false",
+                    "0",
+                    "non pf",
+                    "non-pf"
+                ] else 1
                 bank_name = clean_text(row.get("bank_name"))
                 account_no = clean_employee_text_value(
                     row.get("account_no")
@@ -4517,6 +4531,7 @@ def upload_employees():
                             pan_no = ?,
                             address = ?,
                             email_id = ?
+                            pf_applicable = ?
                         WHERE company_id = ?
                           AND emp_code = ?
                     """, (
@@ -4538,6 +4553,7 @@ def upload_employees():
                         pan_no,
                         employee_address,
                         email_id,
+                        pf_applicable,
                         company_id,
                         emp_code
                     ))
@@ -4568,12 +4584,13 @@ def upload_employees():
                             pan_no,
                             address,
                             email_id
+                            pf_applicable
                         )
                         VALUES (
                             ?, ?, ?, ?, ?, ?,
                             ?, ?, ?, ?, ?, ?,
                             ?, ?, ?, ?, ?, ?,
-                            ?, ?
+                            ?, ?, ?
                         )
                     """, (
                         company_id,
@@ -4595,7 +4612,8 @@ def upload_employees():
                         aadhaar_no,
                         pan_no,
                         employee_address,
-                        email_id
+                        email_id,
+                        pf_applicable
                     ))
 
                 # Create leave balance only for new employees /
@@ -5130,11 +5148,12 @@ def employees_list():
 
 # ============================================================
 # PAYROLL PRO - EDIT EMPLOYEE ROUTE
-# Paste this block in app.py after employees_list() route.
-# Required import at top: import re
 # ============================================================
 
-@app.route("/employees/<path:emp_code>/edit", methods=["GET", "POST"])
+@app.route(
+    "/employees/<path:emp_code>/edit",
+    methods=["GET", "POST"]
+)
 @login_required
 def edit_employee(emp_code):
     ensure_employee_personal_columns()
@@ -5142,44 +5161,81 @@ def edit_employee(emp_code):
     company_id = current_company_id()
 
     if not company_id:
-        flash("Company not found. Please login again.", "danger")
+        flash(
+            "Company not found. Please login again.",
+            "danger"
+        )
         return redirect(url_for("login"))
 
     def local_clean_text(value, default=""):
         if value is None:
             return default
+
         text = str(value).strip()
-        if not text or text.lower() in ["nan", "none", "null"]:
+
+        if (
+            not text
+            or text.lower() in ["nan", "none", "null"]
+        ):
             return default
-        if text.endswith(".0") and text[:-2].replace("-", "").isdigit():
+
+        if (
+            text.endswith(".0")
+            and text[:-2].replace("-", "").isdigit()
+        ):
             text = text[:-2]
+
         return text
 
     def local_clean_float(value, default=0):
         try:
             text = local_clean_text(value)
-            return float(text) if text else float(default)
-        except Exception:
+            return (
+                float(text)
+                if text
+                else float(default)
+            )
+        except (TypeError, ValueError):
             return float(default)
 
     def local_digits(value):
-        return "".join(ch for ch in local_clean_text(value) if ch.isdigit())
+        return "".join(
+            ch
+            for ch in local_clean_text(value)
+            if ch.isdigit()
+        )
 
     def local_mobile(value):
         digits = local_digits(value)
+
         if not digits:
             return ""
-        if len(digits) == 12 and digits.startswith("91"):
+
+        if (
+            len(digits) == 12
+            and digits.startswith("91")
+        ):
             digits = digits[2:]
-        if len(digits) == 11 and digits.startswith("0"):
+
+        if (
+            len(digits) == 11
+            and digits.startswith("0")
+        ):
             digits = digits[1:]
+
         return digits
 
     def local_valid_email(value):
         email = local_clean_text(value).lower()
+
         if not email:
             return True
-        return "@" in email and "." in email.split("@")[-1] and " " not in email
+
+        return (
+            "@" in email
+            and "." in email.split("@")[-1]
+            and " " not in email
+        )
 
     conn = get_db()
     cur = conn.cursor()
@@ -5191,69 +5247,241 @@ def edit_employee(emp_code):
             WHERE company_id = ?
               AND emp_code = ?
             LIMIT 1
-        """, (company_id, emp_code))
+        """, (
+            company_id,
+            emp_code
+        ))
 
         employee = cur.fetchone()
 
         if not employee:
-            flash("Employee record not found.", "danger")
+            flash(
+                "Employee record not found.",
+                "danger"
+            )
             return redirect(url_for("employees_list"))
 
         if request.method == "POST":
-            employee_name = local_clean_text(request.form.get("employee_name"))
-            role = local_clean_text(request.form.get("role"))
-            department = local_clean_text(request.form.get("department"), "General")
-            gender = local_clean_text(request.form.get("gender"), "male").lower()
+            employee_name = local_clean_text(
+                request.form.get("employee_name")
+            )
 
-            monthly_salary = local_clean_float(request.form.get("monthly_salary"), 0)
-            tax_regime = local_clean_text(request.form.get("tax_regime"), "new").lower()
-            other_annual_deductions = local_clean_float(request.form.get("other_annual_deductions"), 0)
-            special_allowance = local_clean_float(request.form.get("special_allowance"), 0)
+            role = local_clean_text(
+                request.form.get("role")
+            )
 
-            uan_no = local_clean_text(request.form.get("uan_no"))
-            esic_no = local_clean_text(request.form.get("esic_no"))
-            bank_name = local_clean_text(request.form.get("bank_name"))
-            account_no = local_clean_text(request.form.get("account_no"))
-            ifsc_code = local_clean_text(request.form.get("ifsc_code")).upper()
+            department = local_clean_text(
+                request.form.get("department"),
+                "General"
+            )
 
-            mobile_no = local_mobile(request.form.get("mobile_no"))
-            email_id = local_clean_text(request.form.get("email_id")).lower()
-            aadhaar_no = local_digits(request.form.get("aadhaar_no"))
-            pan_no = local_clean_text(request.form.get("pan_no")).upper()
-            employee_address = local_clean_text(request.form.get("address"))
+            gender = local_clean_text(
+                request.form.get("gender"),
+                "male"
+            ).lower()
+
+            monthly_salary = local_clean_float(
+                request.form.get("monthly_salary"),
+                0
+            )
+
+            tax_regime = local_clean_text(
+                request.form.get("tax_regime"),
+                "new"
+            ).lower()
+
+            other_annual_deductions = local_clean_float(
+                request.form.get(
+                    "other_annual_deductions"
+                ),
+                0
+            )
+
+            special_allowance = local_clean_float(
+                request.form.get("special_allowance"),
+                0
+            )
+
+            # ------------------------------------------------
+            # PF / NON-PF STATUS
+            # ------------------------------------------------
+            pf_applicable_raw = request.form.get(
+                "pf_applicable"
+            )
+
+            if pf_applicable_raw == "0":
+                pf_applicable = 0
+            elif pf_applicable_raw == "1":
+                pf_applicable = 1
+            else:
+                # Missing/invalid form value:
+                # preserve current database value.
+                try:
+                    current_pf_value = employee[
+                        "pf_applicable"
+                    ]
+
+                    pf_applicable = (
+                        1
+                        if current_pf_value is None
+                        else int(current_pf_value)
+                    )
+                except (
+                    KeyError,
+                    IndexError,
+                    TypeError,
+                    ValueError
+                ):
+                    pf_applicable = 1
+
+            uan_no = local_clean_text(
+                request.form.get("uan_no")
+            )
+
+            esic_no = local_clean_text(
+                request.form.get("esic_no")
+            )
+
+            # Current Payroll Pro business rule:
+            # Non-PF employee has no UAN / ESIC details.
+            if pf_applicable == 0:
+                uan_no = ""
+                esic_no = ""
+
+            bank_name = local_clean_text(
+                request.form.get("bank_name")
+            )
+
+            account_no = local_clean_text(
+                request.form.get("account_no")
+            )
+
+            ifsc_code = local_clean_text(
+                request.form.get("ifsc_code")
+            ).upper()
+
+            mobile_no = local_mobile(
+                request.form.get("mobile_no")
+            )
+
+            email_id = local_clean_text(
+                request.form.get("email_id")
+            ).lower()
+
+            aadhaar_no = local_digits(
+                request.form.get("aadhaar_no")
+            )
+
+            pan_no = local_clean_text(
+                request.form.get("pan_no")
+            ).upper()
+
+            employee_address = local_clean_text(
+                request.form.get("address")
+            )
 
             errors = []
 
             if not employee_name:
-                errors.append("Employee name is required.")
+                errors.append(
+                    "Employee name is required."
+                )
+
             if len(employee_name) > 150:
-                errors.append("Employee name is too long.")
+                errors.append(
+                    "Employee name is too long."
+                )
+
             if not role:
-                errors.append("Role / designation is required.")
+                errors.append(
+                    "Role / designation is required."
+                )
+
             if len(role) > 150:
-                errors.append("Role / designation is too long.")
+                errors.append(
+                    "Role / designation is too long."
+                )
+
             if len(department) > 150:
-                errors.append("Department name is too long.")
-            if gender not in ["male", "female", "other"]:
-                errors.append("Gender must be male, female, or other.")
+                errors.append(
+                    "Department name is too long."
+                )
+
+            if gender not in [
+                "male",
+                "female",
+                "other"
+            ]:
+                errors.append(
+                    "Gender must be male, female, or other."
+                )
+
             if monthly_salary <= 0:
-                errors.append("Monthly salary must be greater than 0.")
+                errors.append(
+                    "Monthly salary must be greater than 0."
+                )
+
             if tax_regime not in ["old", "new"]:
-                errors.append("Tax regime must be old or new.")
+                errors.append(
+                    "Tax regime must be old or new."
+                )
+
             if other_annual_deductions < 0:
-                errors.append("Other annual deductions cannot be negative.")
+                errors.append(
+                    "Other annual deductions cannot be negative."
+                )
+
             if special_allowance < 0:
-                errors.append("Special allowance cannot be negative.")
-            if mobile_no and (len(mobile_no) != 10 or mobile_no[0] not in "6789"):
-                errors.append("Mobile number must be a valid 10-digit Indian mobile number.")
-            if aadhaar_no and len(aadhaar_no) != 12:
-                errors.append("Aadhaar number must contain exactly 12 digits.")
-            if pan_no and not re.fullmatch(r"[A-Z]{5}[0-9]{4}[A-Z]", pan_no):
-                errors.append("PAN number must be in format ABCDE1234F.")
-            if email_id and not local_valid_email(email_id):
-                errors.append("Employee email address is invalid.")
+                errors.append(
+                    "Special allowance cannot be negative."
+                )
+
+            if (
+                mobile_no
+                and (
+                    len(mobile_no) != 10
+                    or mobile_no[0] not in "6789"
+                )
+            ):
+                errors.append(
+                    "Mobile number must be a valid "
+                    "10-digit Indian mobile number."
+                )
+
+            if (
+                aadhaar_no
+                and len(aadhaar_no) != 12
+            ):
+                errors.append(
+                    "Aadhaar number must contain "
+                    "exactly 12 digits."
+                )
+
+            if (
+                pan_no
+                and not re.fullmatch(
+                    r"[A-Z]{5}[0-9]{4}[A-Z]",
+                    pan_no
+                )
+            ):
+                errors.append(
+                    "PAN number must be in format "
+                    "ABCDE1234F."
+                )
+
+            if (
+                email_id
+                and not local_valid_email(email_id)
+            ):
+                errors.append(
+                    "Employee email address is invalid."
+                )
+
             if len(employee_address) > 500:
-                errors.append("Address is too long. Maximum 500 characters allowed.")
+                errors.append(
+                    "Address is too long. Maximum "
+                    "500 characters allowed."
+                )
 
             if errors:
                 for error in errors:
@@ -5267,10 +5495,14 @@ def edit_employee(emp_code):
                     "gender": gender,
                     "monthly_salary": monthly_salary,
                     "tax_regime": tax_regime,
-                    "other_annual_deductions": other_annual_deductions,
-                    "special_allowance": special_allowance,
+                    "other_annual_deductions":
+                        other_annual_deductions,
+                    "special_allowance":
+                        special_allowance,
                     "uan_no": uan_no,
                     "esic_no": esic_no,
+                    "pf_applicable":
+                        pf_applicable,
                     "bank_name": bank_name,
                     "account_no": account_no,
                     "ifsc_code": ifsc_code,
@@ -5281,7 +5513,10 @@ def edit_employee(emp_code):
                     "address": employee_address
                 }
 
-                return render_template("edit_employee.html", employee=form_data)
+                return render_template(
+                    "edit_employee.html",
+                    employee=form_data
+                )
 
             cur.execute("""
                 UPDATE employees
@@ -5296,6 +5531,7 @@ def edit_employee(emp_code):
                     special_allowance = ?,
                     uan_no = ?,
                     esic_no = ?,
+                    pf_applicable = ?,
                     bank_name = ?,
                     account_no = ?,
                     ifsc_code = ?,
@@ -5317,6 +5553,7 @@ def edit_employee(emp_code):
                 special_allowance,
                 uan_no,
                 esic_no,
+                pf_applicable,
                 bank_name,
                 account_no,
                 ifsc_code,
@@ -5329,21 +5566,49 @@ def edit_employee(emp_code):
                 emp_code
             ))
 
-            conn.commit()
-            flash(f"Employee {employee_name} updated successfully.", "success")
-            return redirect(url_for("employees_list", search=emp_code))
+            if cur.rowcount != 1:
+                raise RuntimeError(
+                    "Employee record was not updated."
+                )
 
-        return render_template("edit_employee.html", employee=employee)
+            conn.commit()
+
+            flash(
+                f"Employee {employee_name} updated "
+                f"successfully as "
+                f"{'PF Employee' if pf_applicable == 1 else 'Non-PF Employee'}.",
+                "success"
+            )
+
+            return redirect(
+                url_for(
+                    "employees_list",
+                    search=emp_code
+                )
+            )
+
+        return render_template(
+            "edit_employee.html",
+            employee=employee
+        )
 
     except Exception as e:
         conn.rollback()
-        print("Edit employee error:", e)
-        flash(f"Employee update failed: {str(e)}", "danger")
+
+        print(
+            "Edit employee error:",
+            e
+        )
+
+        flash(
+            f"Employee update failed: {str(e)}",
+            "danger"
+        )
+
         return redirect(url_for("employees_list"))
 
     finally:
         conn.close()
-
 
 # ---------------------------
 # ATTENDANCE
@@ -6795,6 +7060,11 @@ def run_payroll():
         attendance_bonus = float(row["bonus"] or 0)
 
         gender = str(row["gender"] or "male").strip().lower()
+        pf_applicable = (
+            1
+            if row["pf_applicable"] is None
+            else int(row["pf_applicable"])
+        )
 
         # Approved leave data
         cur.execute("""
@@ -6881,15 +7151,41 @@ def run_payroll():
             overtime_amount = 0
 
         # PF calculation with wage ceiling
-        pf_base = basic + da
 
-        if pf_wage_ceiling > 0:
-            pf_base_for_calculation = min(pf_base, pf_wage_ceiling)
+        if pf_applicable == 1:
+
+            pf_base = basic + da
+
+            if pf_wage_ceiling > 0:
+                pf_base_for_calculation = min(
+                    pf_base,
+                    pf_wage_ceiling
+                )
+            else:
+                pf_base_for_calculation = pf_base
+
+            pf_employee = min(
+                rupee(
+                    pf_base_for_calculation
+                    * pf_employee_rate
+                ),
+                pf_max_deduction
+            )
+
+            pf_employer = min(
+                rupee(
+                    pf_base_for_calculation
+                    * pf_employer_rate
+                ),
+                pf_max_deduction
+            )
+
         else:
-            pf_base_for_calculation = pf_base
 
-        pf_employee = min(rupee(pf_base_for_calculation * pf_employee_rate), pf_max_deduction)
-        pf_employer = min(rupee(pf_base_for_calculation * pf_employer_rate), pf_max_deduction)
+            pf_base = 0
+            pf_base_for_calculation = 0
+            pf_employee = 0
+            pf_employer = 0
 
         # ESIC calculation
         if gross <= esic_wage_limit:
@@ -13719,23 +14015,93 @@ def generate_payslip(row):
     department = clean_value(row_value("department"))
     gender = clean_value(row_value("gender"))
 
-    uan_no = clean_value(row_value("uan_no"))
-    esic_no = clean_value(row_value("esic_no"))
-    bank_name = clean_value(row_value("bank_name"))
-    account_no = clean_value(row_value("account_no"))
-    ifsc_code = clean_value(row_value("ifsc_code"))
+        # --------------------------------------------------------
+    # PF / UAN / ESIC DISPLAY CONTROL
+    # --------------------------------------------------------
+    pf_value = row_value("pf_applicable", 1)
 
-    working_days = row_value("attendance_working_days", row_value("working_days", 0))
-    present_days = row_value("attendance_present_days", row_value("present_days", 0))
-    weekly_off = row_value("attendance_weekly_off", row_value("weekly_off", 0))
-    attendance_paid_leave = row_value("attendance_paid_leave", row_value("paid_leave_days", 0))
-    holiday = row_value("attendance_holiday", row_value("holiday", 0))
-    lop_days = row_value("attendance_lop_days", row_value("lwp_days", 0))
-    attendance_paid_days = row_value("attendance_paid_days", row_value("payable_days", 0))
-    overtime_hours = row_value("attendance_overtime_hours", row_value("overtime_hours", 0))
+    try:
+        pf_applicable = (
+            1
+            if pf_value is None
+            else int(pf_value)
+        )
+    except (TypeError, ValueError):
+        pf_applicable = 1
 
-    payable_days = row_value("payable_days", attendance_paid_days)
-    lwp_deduction = row_value("lwp_deduction", 0)
+    # Blank statutory numbers ko "-" me convert nahi karna,
+    # kyunki blank hone par unki row hide karni hai.
+    uan_no = clean_value(
+        row_value("uan_no"),
+        ""
+    )
+
+    esic_no = clean_value(
+        row_value("esic_no"),
+        ""
+    )
+
+    bank_name = clean_value(
+        row_value("bank_name")
+    )
+
+    account_no = clean_value(
+        row_value("account_no")
+    )
+
+    ifsc_code = clean_value(
+        row_value("ifsc_code")
+    )
+
+    working_days = row_value(
+        "attendance_working_days",
+        row_value("working_days", 0)
+    )
+
+    present_days = row_value(
+        "attendance_present_days",
+        row_value("present_days", 0)
+    )
+
+    weekly_off = row_value(
+        "attendance_weekly_off",
+        row_value("weekly_off", 0)
+    )
+
+    attendance_paid_leave = row_value(
+        "attendance_paid_leave",
+        row_value("paid_leave_days", 0)
+    )
+
+    holiday = row_value(
+        "attendance_holiday",
+        row_value("holiday", 0)
+    )
+
+    lop_days = row_value(
+        "attendance_lop_days",
+        row_value("lwp_days", 0)
+    )
+
+    attendance_paid_days = row_value(
+        "attendance_paid_days",
+        row_value("payable_days", 0)
+    )
+
+    overtime_hours = row_value(
+        "attendance_overtime_hours",
+        row_value("overtime_hours", 0)
+    )
+
+    payable_days = row_value(
+        "payable_days",
+        attendance_paid_days
+    )
+
+    lwp_deduction = row_value(
+        "lwp_deduction",
+        0
+    )
 
     calculated_paid_days = (
         to_float(present_days)
@@ -13763,16 +14129,35 @@ def generate_payslip(row):
 
     # Header
     c.setFillColorRGB(0.10, 0.17, 0.28)
-    c.rect(35, y - 66, width - 70, 66, fill=1, stroke=0)
+    c.rect(
+        35,
+        y - 66,
+        width - 70,
+        66,
+        fill=1,
+        stroke=0
+    )
 
     c.setFillColorRGB(1, 1, 1)
     c.setFont("Helvetica-Bold", 16)
-    c.drawCentredString(width / 2, y - 18, short_text(company_name.upper(), 60))
+    c.drawCentredString(
+        width / 2,
+        y - 18,
+        short_text(company_name.upper(), 60)
+    )
 
     c.setFont("Helvetica", 8.5)
-    c.drawCentredString(width / 2, y - 34, "Salary Slip")
+    c.drawCentredString(
+        width / 2,
+        y - 34,
+        "Salary Slip"
+    )
 
-    address_line = short_text(company_address, 82) if company_address not in ["", "-"] else ""
+    address_line = (
+        short_text(company_address, 82)
+        if company_address not in ["", "-"]
+        else ""
+    )
 
     email_phone_parts = []
 
@@ -13782,34 +14167,64 @@ def generate_payslip(row):
     if company_phone not in ["", "-"]:
         email_phone_parts.append(company_phone)
 
-    email_phone_line = " | ".join(email_phone_parts)
+    email_phone_line = " | ".join(
+        email_phone_parts
+    )
 
     if address_line:
-        c.drawCentredString(width / 2, y - 49, address_line)
+        c.drawCentredString(
+            width / 2,
+            y - 49,
+            address_line
+        )
 
     if email_phone_line:
-        c.drawCentredString(width / 2, y - 61, short_text(email_phone_line, 82))
+        c.drawCentredString(
+            width / 2,
+            y - 61,
+            short_text(email_phone_line, 82)
+        )
 
     y -= 88
 
     # Title
     c.setFillColorRGB(0, 0, 0)
     c.setFont("Helvetica-Bold", 13)
-    c.drawCentredString(width / 2, y, f"SALARY SLIP - {clean_value(row_value('month'))}")
+    c.drawCentredString(
+        width / 2,
+        y,
+        f"SALARY SLIP - "
+        f"{clean_value(row_value('month'))}"
+    )
 
     y -= 26
 
-    # Employee Info
+    # Employee Information
     c.setFont("Helvetica-Bold", 10.5)
-    c.drawString(40, y, "Employee Information")
+    c.drawString(
+        40,
+        y,
+        "Employee Information"
+    )
 
     y -= 9
 
     emp_box_height = 118
-    c.rect(40, y - emp_box_height, width - 80, emp_box_height)
+
+    c.rect(
+        40,
+        y - emp_box_height,
+        width - 80,
+        emp_box_height
+    )
 
     # Center divider
-    c.line(width / 2, y, width / 2, y - emp_box_height)
+    c.line(
+        width / 2,
+        y,
+        width / 2,
+        y - emp_box_height
+    )
 
     left = [
         ("Employee Code", emp_code),
@@ -13819,13 +14234,29 @@ def generate_payslip(row):
         ("Gender", gender),
     ]
 
-    right = [
-        ("UAN No.", uan_no),
-        ("ESIC No.", esic_no),
+    right = []
+
+    # UAN sirf PF employee aur valid UAN hone par dikhega.
+    if (
+        pf_applicable == 1
+        and uan_no not in ["", "-"]
+    ):
+        right.append(
+            ("UAN No.", uan_no)
+        )
+
+    # ESIC PF se independent hai.
+    # Valid ESIC number hone par hi dikhega.
+    if esic_no not in ["", "-"]:
+        right.append(
+            ("ESIC No.", esic_no)
+        )
+
+    right.extend([
         ("Bank Name", bank_name),
         ("Account No.", account_no),
         ("IFSC Code", ifsc_code),
-    ]
+    ])
 
     yy = y - 22
 
@@ -13954,14 +14385,41 @@ def generate_payslip(row):
         c.drawString(x + table_w * 0.50 + 8, yy, deductions[i][0])
         c.drawRightString(x + table_w - 8, yy, money(deductions[i][1]))
 
+    # Total Earnings =
+    # Gross Salary + Overtime + Festival Bonus
+    total_earnings = (
+        to_float(row_value("gross", 0))
+        + to_float(row_value("overtime_amount", 0))
+        + to_float(row_value("festival_bonus", 0))
+    )
+
     total_y = table_y - row_h * 8 - 12.5
 
     c.setFont("Helvetica-Bold", 8.5)
-    c.drawString(x + 8, total_y, "Gross Earnings")
-    c.drawRightString(x + table_w * 0.50 - 8, total_y, money(row_value("gross", 0)))
 
-    c.drawString(x + table_w * 0.50 + 8, total_y, "Net Pay")
-    c.drawRightString(x + table_w - 8, total_y, money(row_value("net_pay", 0)))
+    c.drawString(
+        x + 8,
+        total_y,
+        "Total Earnings"
+    )
+
+    c.drawRightString(
+        x + table_w * 0.50 - 8,
+        total_y,
+        money(total_earnings)
+    )
+
+    c.drawString(
+        x + table_w * 0.50 + 8,
+        total_y,
+        "Net Pay"
+    )
+
+    c.drawRightString(
+        x + table_w - 8,
+        total_y,
+        money(row_value("net_pay", 0))
+    )
 
     y = table_y - row_h * rows_count - 22
 
@@ -14960,6 +15418,7 @@ def download_all_payslips():
 
             COALESCE(e.uan_no, '') AS uan_no,
             COALESCE(e.esic_no, '') AS esic_no,
+            COALESCE(e.pf_applicable, 1) AS pf_applicable,
             COALESCE(e.bank_name, '') AS bank_name,
             COALESCE(e.account_no, '') AS account_no,
             COALESCE(e.ifsc_code, '') AS ifsc_code,
