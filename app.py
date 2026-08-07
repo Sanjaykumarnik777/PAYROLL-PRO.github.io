@@ -14655,7 +14655,7 @@ def get_whatsapp_cloud_config():
         ).strip().lower(),
         "template_name": os.getenv(
             "WHATSAPP_TEMPLATE_NAME",
-            "monthly_payslip"
+            "monthly_payslip_pdf"
         ).strip(),
         "template_language": os.getenv(
             "WHATSAPP_TEMPLATE_LANGUAGE",
